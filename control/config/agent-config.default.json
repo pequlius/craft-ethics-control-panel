@@ -1,0 +1,26 @@
+{
+  "global": {
+    "velocity": 3,
+    "autonomy": 2,
+    "clarification": 2,
+    "reporting": 2
+  },
+  "perspective_agents": {
+    "consequence": {
+      "active": true,
+      "strength": 3,
+      "priority": 1
+    },
+    "resources": {
+      "active": true,
+      "strength": 2,
+      "priority": 2
+    },
+    "craftsmanship": {
+      "active": true,
+      "strength": 3,
+      "priority": 3
+    }
+  },
+  "updated_at": ""
+}
