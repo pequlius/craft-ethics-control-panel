@@ -6,9 +6,9 @@ An experimental system for steering AI agent behaviour in real time during progr
 
 ## What it does
 
-The system lets you configure how a Claude agent behaves before and during a task — without editing prompts manually. Settings are stored in a JSON config file that a local API server exposes. The agent reads those settings at the start of each task and applies them.
+The system lets you configure how a Claude Code agent behaves before and during a task — without editing prompts manually. Settings are stored in a JSON config file that the agent reads directly at the start of each task and applies immediately.
 
-You control four global behavioural dimensions and up to three perspective agents, all through a browser-based GUI. Changes take effect immediately; the agent picks them up the next time it reads `/config/prompt`.
+You control five global behavioural dimensions through a browser-based GUI. Changes take effect on the next step — the agent always reads the latest values and never caches previous settings.
 
 ---
 
@@ -16,22 +16,26 @@ You control four global behavioural dimensions and up to three perspective agent
 
 ```
 craft-ethics-control-panel/
-├── cases/                        # One folder per study session / task
+├── cases/                               # One folder per session (gitignored)
 │   └── case-01/
-│       └── CLAUDE.md             # Agent behaviour contract for this case
+│       └── CLAUDE.md                    # Compact behaviour contract for this case
 │
-└── control/                      # The control system
-    ├── CLAUDE.md                 # Master agent behaviour contract
-    ├── config/
-    │   ├── agent-config.json          # Live config (read by the server)
-    │   └── agent-config.default.json  # Default values (used by reset script)
-    ├── gui/                      # React + Vite frontend
-    │   └── src/App.jsx
-    ├── server/
-    │   └── server.js             # Express API server (port 3333)
-    └── scripts/
-        ├── new-case.js           # Creates a new numbered case folder
-        └── reset.js              # Resets config to defaults
+├── control/                             # The control system
+│   ├── CLAUDE.md                        # Full reference behaviour contract
+│   ├── CLAUDE.case-template.md          # Compact template copied into new cases
+│   ├── config/
+│   │   ├── agent-config.json            # Live config (gitignored, read by agent)
+│   │   └── agent-config.default.json    # Default values (used by reset script)
+│   ├── gui/                             # React + Vite frontend
+│   │   └── src/App.jsx
+│   ├── server/
+│   │   └── server.js                    # Express API server (port 3333)
+│   └── scripts/
+│       ├── new-case.js                  # Creates a new numbered case folder
+│       └── reset.js                     # Resets config to defaults
+│
+├── start.bat                            # Starts server + GUI (Windows)
+└── new-case.bat                         # Creates a new case folder (Windows)
 ```
 
 ---
@@ -50,85 +54,56 @@ npm install
 
 ### 2. Start the system
 
-From the `control/` directory, run:
+Double-click **`start.bat`** in the root folder, or from the `control/` directory:
 
 ```bash
 npm start
 ```
 
-This starts both services in parallel using `concurrently`:
+This starts both services in parallel:
 
 | Service | URL |
 |---------|-----|
 | API server | http://localhost:3333 |
 | Control panel GUI | http://localhost:5173 |
 
-Open **http://localhost:5173** in your browser to access the control panel.
+Open **http://localhost:5173** in your browser.
 
 ---
 
 ## The control panel
 
-The GUI lets you configure agent behaviour without touching any files. Changes are saved automatically (debounced, 500 ms after the last interaction).
+The GUI lets you configure agent behaviour without touching any files. Changes are saved automatically (500 ms debounce). A dot in the bottom bar shows sync state: green = saved, yellow = saving, red = server unreachable.
 
-### Global parameters
+### Parameters
 
-Four sliders that apply to all tasks:
+Five sliders, each on a scale of 1–5:
 
-| Parameter | Low (1) | High (5) | Description |
-|-----------|---------|----------|-------------|
-| **Velocity** | Minimalt | Fullt | How much the agent implements beyond what is explicitly asked |
-| **Autonomy** | Strikt | Fritt | How freely the agent deviates from instructions |
-| **Clarification** | Antar | Frågar | How often the agent asks clarifying questions |
-| **Reporting** | Tyst | Utförlig | How much the agent explains what it did |
-
-### Perspective agents
-
-Three optional agents that add a specific lens to the agent's reasoning. Each can be toggled on/off and given a strength level (1–5):
-
-| Agent | Focus |
-|-------|-------|
-| **Konsekvens** | Consequences, bias, and EDI factors |
-| **Resurser** | Resource usage and token efficiency |
-| **Noggrannhet** | Code quality, precision, and good practices |
-
-A strength of **4 or 5** makes the perspective a hard constraint — the agent will flag and block issues rather than just noting them.
-
-### Status indicator
-
-A dot in the bottom bar shows the sync state:
-
-- 🟢 **Synkroniserad** — config saved to disk
-- 🟡 **Sparar...** — save in progress
-- 🔴 **Offline** — server not reachable, changes are not saved
+| Parameter | Low (1) | High (5) | What it controls |
+|-----------|---------|----------|-----------------|
+| **Fidelity** | Sketch | Complete | How finished the output is per prompt. Low = wireframe outlines and stubs only, built up incrementally. High = production-ready in one pass. |
+| **Autonomy** | Strict | Free | How much the agent infers versus asks. Low = stops and asks for every unspecified detail. High = acts fully independently and reports afterward. |
+| **Clarification** | Assumes | Asks | Whether the agent clarifies before starting. Low = picks an interpretation and proceeds immediately. High = mandatory restatement and approval before any code is written. |
+| **Explanations** | Silent | Detailed | How much the agent documents its work. Low = output only, no commentary. High = thorough log of every step, decision, and alternative considered. |
+| **Ethical Awareness** | Provocative | Aware | How much ethical and social considerations shape the output. Low = design provocation mode, actively challenges norms. High = full ethical scrutiny, flags and blocks suggestions with significant risk. |
 
 ---
 
 ## How the agent reads the config
 
-Every case folder contains a `CLAUDE.md` file. When Claude opens a project inside a case folder, it reads this file automatically (it is a standard Claude Code behaviour contract).
+Each case folder contains a `CLAUDE.md` file. When Claude Code opens a project inside a case folder it reads this file automatically.
 
-`CLAUDE.md` tells the agent to fetch its instructions from:
-
-```
-http://localhost:3333/config/prompt
-```
-
-The server returns a plain-text system instruction block derived from the current config, for example:
+`CLAUDE.md` instructs the agent to read the config file directly:
 
 ```
-[VELOCITY] Implement with reasonable surrounding structure.
-[AUTONOMY] Stay close to instructions. Ask before deviating.
-[CLARIFICATION] Ask only if the task is fundamentally unclear.
-[REPORTING] One-line status after completing work.
-
-[PERSPECTIVE: CONSEQUENCE — priority 1, strength 3/5]
-Weigh consequences, bias, and EDI factors in all decisions.
-Actively weigh feedback in decisions.
-Flag issues but do not block output.
+../../control/config/agent-config.json
 ```
 
-If the server is unreachable the agent falls back to the defaults described in `CLAUDE.md`.
+The agent reads the five parameters in the `global` block and applies them according to the behaviour descriptions in `CLAUDE.md`. No server call is needed — the config is a plain JSON file on disk.
+
+If the config file is unreachable the agent falls back to:
+`fidelity 2 · autonomy 2 · clarification 2 · explanations 2 · ethics 3`
+and states this at the start of the response.
 
 ---
 
@@ -136,41 +111,42 @@ If the server is unreachable the agent falls back to the defaults described in `
 
 ### Create a new case
 
-From the `control/` directory:
+Double-click **`new-case.bat`** in the root folder, or from the `control/` directory:
 
 ```bash
 npm run new-case
 ```
 
-This creates the next numbered folder under `cases/` (e.g. `cases/case-02/`) and copies `CLAUDE.md` into it. Open the new case folder in Claude Code to start a session with the behaviour contract active.
+This creates the next numbered folder under `cases/` (e.g. `cases/case-08/`) and copies the compact `CLAUDE.case-template.md` into it as `CLAUDE.md`. Open the new case folder in Claude Code to start a session with the behaviour contract active.
 
 ### Reset config to defaults
 
 ```bash
+cd control
 npm run reset
 ```
 
-Copies `control/config/agent-config.default.json` over `control/config/agent-config.json`. Useful at the start of a new case or when you want a clean baseline.
+Copies `agent-config.default.json` over `agent-config.json`. Useful at the start of a new session or when you want a clean baseline.
 
 ---
 
 ## API reference
 
-The server exposes three endpoints on `http://localhost:3333`:
+The server exposes endpoints on `http://localhost:3333` used by the GUI:
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/config` | Returns the full config JSON |
 | `PUT` | `/config` | Saves a new config (body: full config object) |
-| `GET` | `/config/prompt` | Returns the compiled system instruction string |
+| `GET` | `/config/prompt` | Returns compiled system instructions as plain text |
 
 ---
 
-## Typical workflow
+## Typical workshop workflow
 
-1. Run `npm run reset` in `control/` to start from a clean config.
-2. Run `npm run new-case` to create a fresh case folder.
-3. Run `npm start` to launch the server and GUI.
+1. Double-click `start.bat` to launch the server and GUI.
+2. Open the control panel at **http://localhost:5173** and set parameters for the session.
+3. Double-click `new-case.bat` to create a fresh case folder.
 4. Open the new case folder in Claude Code.
-5. Adjust behaviour in the control panel at http://localhost:5173 as the session progresses.
-6. The agent re-reads `/config/prompt` at the start of each new task (and after 10 minutes of continuous work).
+5. Adjust parameters in the control panel as the session progresses — the agent picks up the latest values at the start of each new step.
+6. Run `npm run reset` in `control/` between sessions to restore defaults.
