@@ -1,4 +1,10 @@
 node_modules/
+cases/
 **/config/agent-config.json
+**/config/agent-prompt.txt
+**/config/perspective-trigger.json
+**/config/perspective-result.json
 .DS_Store
 dist/
+.claude/
+**/.env*

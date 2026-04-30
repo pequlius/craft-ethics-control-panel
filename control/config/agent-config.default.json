@@ -1,9 +1,10 @@
 {
   "global": {
-    "velocity": 3,
+    "fidelity": 3,
     "autonomy": 2,
     "clarification": 2,
-    "reporting": 2
+    "explanations": 2,
+    "ethics": 3
   },
   "perspective_agents": {
     "consequence": {

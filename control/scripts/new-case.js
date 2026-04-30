@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const casesDir = path.join(__dirname, "..", "..", "cases");
-const claudeMd = path.join(__dirname, "..", "CLAUDE.md");
+const claudeMd = path.join(__dirname, "..", "CLAUDE.case-template.md");
 
 fs.mkdirSync(casesDir, { recursive: true });
 

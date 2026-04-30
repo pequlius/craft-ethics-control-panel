@@ -5,32 +5,45 @@ const MONO = "'Courier New', monospace";
 const SANS = "'Helvetica Neue', Arial, sans-serif";
 
 const GLOBAL_DIMS = [
-  { id: "velocity",      label: "Hastighet",   color: "#f97316", low: "Minimalt", high: "Fullt"    },
-  { id: "autonomy",      label: "Frihet",       color: "#8b5cf6", low: "Strikt",  high: "Fritt"    },
-  { id: "clarification", label: "Klargöranden", color: "#0ea5e9", low: "Antar",   high: "Frågar"   },
-  { id: "reporting",     label: "Redogörelse",  color: "#10b981", low: "Tyst",    high: "Utförlig" },
+  {
+    id: "fidelity", label: "Fidelity", color: "#f97316", low: "Sketch", high: "Complete",
+    desc: "Controls how finished the output is per prompt. Low produces structural outlines and stubs only — each prompt adds one layer. High produces fully implemented, production-ready code in one pass.",
+  },
+  {
+    id: "autonomy", label: "Autonomy", color: "#8b5cf6", low: "Strict", high: "Free",
+    desc: "Controls how much the agent infers versus asks. Low means nothing is assumed — every unspecified detail triggers a question. High means the agent acts independently, expands scope, and reports afterward.",
+  },
+  {
+    id: "clarification", label: "Clarification", color: "#0ea5e9", low: "Assumes", high: "Asks",
+    desc: "Controls whether the agent clarifies before starting. Low means it picks an interpretation and proceeds without comment. High requires the agent to restate the task, list all assumptions, and wait for explicit approval before writing anything.",
+  },
+  {
+    id: "explanations", label: "Explanations", color: "#10b981", low: "Silent", high: "Detailed",
+    desc: "Controls how much the agent explains its work. Low means output only — no commentary at all. High means a thorough written account of every step, decision, and alternative considered.",
+  },
+  {
+    id: "ethics", label: "Ethical Awareness", color: "#ec4899", low: "Provocative", high: "Aware",
+    desc: "Controls how much ethical and social considerations shape the output. Low is a design provocation mode — the agent actively challenges norms and ignores harm and DEI concerns. High applies full ethical scrutiny and blocks suggestions with significant risk.",
+  },
 ];
 
-const PERSPECTIVE_AGENTS = [
-  { id: "consequence",   label: "Konsekvens",  color: "#6366f1", bg: "#eef2ff", border: "#a5b4fc", desc: "Väger konsekvenser, bias och EDI-faktorer" },
-  { id: "resources",     label: "Resurser",    color: "#10b981", bg: "#ecfdf5", border: "#6ee7b7", desc: "Minimerar resursanvändning och tokens"      },
-  { id: "craftsmanship", label: "Noggrannhet", color: "#f59e0b", bg: "#fffbeb", border: "#fcd34d", desc: "Uppmuntrar precision och god praxis"         },
-];
-
-const STRENGTH_LABELS = ["Minimal", "Låg", "Medel", "Hög", "Maximal"];
+const STRENGTH_LABELS = ["Minimal", "Low", "Medium", "High", "Maximum"];
 
 // --- Sub-components ---
 
 function GlobalSlider({ dim, value, onChange }) {
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
         <span style={{ fontSize: "12px", fontFamily: MONO, color: "#374151", letterSpacing: "0.04em" }}>
           {dim.label}
         </span>
         <span style={{ fontSize: "11px", fontFamily: MONO, color: dim.color, fontWeight: "700" }}>
           {STRENGTH_LABELS[value - 1]}
         </span>
+      </div>
+      <div style={{ fontSize: "10px", color: "#9ca3af", fontFamily: SANS, lineHeight: "1.5", marginBottom: "8px" }}>
+        {dim.desc}
       </div>
       <input
         type="range" min={1} max={5} value={value}
@@ -40,73 +53,6 @@ function GlobalSlider({ dim, value, onChange }) {
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: "2px" }}>
         <span style={{ fontSize: "9px", fontFamily: MONO, color: "#9ca3af" }}>{dim.low}</span>
         <span style={{ fontSize: "9px", fontFamily: MONO, color: "#9ca3af" }}>{dim.high}</span>
-      </div>
-    </div>
-  );
-}
-
-function AgentCard({ agent, on, strength, onToggle, onStrength }) {
-  return (
-    <div style={{
-      background: agent.bg,
-      border: `2px solid ${on ? agent.color : agent.border}`,
-      borderRadius: "16px",
-      padding: "18px 20px",
-      transition: "border-color 0.2s, box-shadow 0.2s",
-      boxShadow: on
-        ? `0 4px 20px ${agent.color}28, 0 0 0 1px ${agent.color}22`
-        : "0 1px 4px #0000000a",
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-        <div>
-          <div style={{ fontSize: "14px", fontWeight: "700", fontFamily: MONO, color: agent.color, letterSpacing: "0.04em" }}>
-            {agent.label}
-          </div>
-          <div style={{ fontSize: "10px", color: "#6b7280", fontFamily: MONO, marginTop: "3px", lineHeight: "1.5" }}>
-            {agent.desc}
-          </div>
-        </div>
-        <button
-          onClick={onToggle}
-          style={{
-            width: "42px", height: "24px", borderRadius: "999px", border: "none",
-            background: on ? agent.color : "#d1d5db",
-            cursor: "pointer", position: "relative", flexShrink: 0, marginLeft: "12px",
-            transition: "background 0.2s",
-            boxShadow: on ? `0 2px 8px ${agent.color}55` : "none",
-          }}
-        >
-          <div style={{
-            width: "18px", height: "18px", borderRadius: "50%", background: "white",
-            position: "absolute", top: "3px",
-            left: on ? "21px" : "3px",
-            transition: "left 0.2s",
-            boxShadow: "0 1px 3px #00000044",
-          }} />
-        </button>
-      </div>
-
-      <div style={{ marginTop: "14px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-          <span style={{ fontSize: "10px", fontFamily: MONO, color: "#9ca3af" }}>Styrka</span>
-          <span style={{
-            fontSize: "10px", fontFamily: MONO, fontWeight: "700",
-            color: on ? agent.color : "#9ca3af",
-            transition: "color 0.2s",
-          }}>
-            {STRENGTH_LABELS[strength - 1]}
-          </span>
-        </div>
-        <input
-          type="range" min={1} max={5} value={strength}
-          onChange={e => onStrength(+e.target.value)}
-          style={{
-            width: "100%", cursor: "pointer",
-            accentColor: on ? agent.color : "#9ca3af",
-            opacity: on ? 1 : 0.45,
-            transition: "opacity 0.2s",
-          }}
-        />
       </div>
     </div>
   );
@@ -131,31 +77,16 @@ function Section({ title, children }) {
 
 // --- Main app ---
 
-const DEFAULT_GLOBALS = { velocity: 3, autonomy: 2, clarification: 2, reporting: 2 };
-const DEFAULT_AGENTS_ON = { consequence: true, resources: true, craftsmanship: true };
-const DEFAULT_AGENTS_STR = { consequence: 3, resources: 2, craftsmanship: 3 };
-const DEFAULT_PRIORITIES = { consequence: 1, resources: 2, craftsmanship: 3 };
+const DEFAULT_GLOBALS = { fidelity: 3, autonomy: 2, clarification: 2, explanations: 2, ethics: 3 };
 
 export default function App() {
-  const [globals, setGlobals] = useState(DEFAULT_GLOBALS);
-  const [agentOn, setAgentOn] = useState(DEFAULT_AGENTS_ON);
-  const [agentStrength, setAgentStrength] = useState(DEFAULT_AGENTS_STR);
-  const [agentPriority] = useState(DEFAULT_PRIORITIES);
+  const [globals, setGlobals]       = useState(DEFAULT_GLOBALS);
+  const [syncStatus, setSyncStatus] = useState("loading");
 
-  const [syncStatus, setSyncStatus] = useState("loading"); // "loading" | "synced" | "saving" | "offline"
-  const debounceRef = useRef(null);
+  const debounceRef    = useRef(null);
   const initializedRef = useRef(false);
-
-  // Build the config payload from current state
-  const buildPayload = useCallback((g, on, str, pri) => ({
-    global: g,
-    perspective_agents: Object.fromEntries(
-      PERSPECTIVE_AGENTS.map(({ id }) => [
-        id,
-        { active: on[id], strength: str[id], priority: pri[id] },
-      ])
-    ),
-  }), []);
+  // Preserve fields we don't expose in the UI (e.g. perspective_agents)
+  const fullConfigRef  = useRef({});
 
   // Fetch config on mount
   useEffect(() => {
@@ -165,16 +96,8 @@ export default function App() {
         return r.json();
       })
       .then(data => {
+        fullConfigRef.current = data;
         if (data.global) setGlobals(data.global);
-        if (data.perspective_agents) {
-          const on = {}, str = {};
-          for (const id of ["consequence", "resources", "craftsmanship"]) {
-            const a = data.perspective_agents[id];
-            if (a) { on[id] = a.active; str[id] = a.strength; }
-          }
-          setAgentOn(prev => ({ ...prev, ...on }));
-          setAgentStrength(prev => ({ ...prev, ...str }));
-        }
         setSyncStatus("synced");
         initializedRef.current = true;
       })
@@ -184,7 +107,7 @@ export default function App() {
       });
   }, []);
 
-  // Debounced PUT whenever state changes (skip first render / load)
+  // Debounced PUT whenever globals change (skip first render / load)
   useEffect(() => {
     if (!initializedRef.current) return;
     if (syncStatus === "offline") return;
@@ -192,7 +115,7 @@ export default function App() {
     setSyncStatus("saving");
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      const payload = buildPayload(globals, agentOn, agentStrength, agentPriority);
+      const payload = { ...fullConfigRef.current, global: globals };
       fetch(`${API}/config`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -204,9 +127,9 @@ export default function App() {
         })
         .catch(() => setSyncStatus("offline"));
     }, 500);
-  }, [globals, agentOn, agentStrength]);
+  }, [globals]);
 
-  const statusText = { synced: "Synkroniserad", saving: "Sparar...", loading: "Laddar...", offline: "Offline" }[syncStatus];
+  const statusText  = { synced: "Synced", saving: "Saving...", loading: "Loading...", offline: "Offline" }[syncStatus];
   const statusColor = { synced: "#10b981", saving: "#f59e0b", loading: "#9ca3af", offline: "#ef4444" }[syncStatus];
 
   return (
@@ -220,7 +143,7 @@ export default function App() {
             padding: "10px 16px", marginBottom: "16px",
             fontSize: "11px", fontFamily: MONO, color: "#b91c1c",
           }}>
-            Servern är inte igång — förändringar sparas inte.
+            Server is not running — changes will not be saved.
           </div>
         )}
 
@@ -238,12 +161,12 @@ export default function App() {
             </span>
           </div>
           <div style={{ fontSize: "11px", color: "#9ca3af", fontFamily: MONO }}>
-            Konfigurerar beteende och perspektiv hos aktiva agenter
+            Configures the behaviour of the active agent
           </div>
         </div>
 
         {/* Global sliders */}
-        <Section title="GLOBALA PARAMETRAR">
+        <Section title="PARAMETERS">
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {GLOBAL_DIMS.map(dim => (
               <GlobalSlider
@@ -251,22 +174,6 @@ export default function App() {
                 dim={dim}
                 value={globals[dim.id]}
                 onChange={v => setGlobals(g => ({ ...g, [dim.id]: v }))}
-              />
-            ))}
-          </div>
-        </Section>
-
-        {/* Perspective agents */}
-        <Section title="PERSPEKTIVAGENTER">
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {PERSPECTIVE_AGENTS.map(agent => (
-              <AgentCard
-                key={agent.id}
-                agent={agent}
-                on={agentOn[agent.id]}
-                strength={agentStrength[agent.id]}
-                onToggle={() => setAgentOn(s => ({ ...s, [agent.id]: !s[agent.id] }))}
-                onStrength={v => setAgentStrength(s => ({ ...s, [agent.id]: v }))}
               />
             ))}
           </div>
