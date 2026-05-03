@@ -82,6 +82,32 @@ const DEFAULT_GLOBALS = { fidelity: 3, autonomy: 2, clarification: 2, explanatio
 export default function App() {
   const [globals, setGlobals]       = useState(DEFAULT_GLOBALS);
   const [syncStatus, setSyncStatus] = useState("loading");
+  const [decisions, setDecisions]       = useState([]);
+  const [analyzing, setAnalyzing]       = useState(false);
+  const [lastAnalyzed, setLastAnalyzed] = useState(null);
+
+  const triggerAnalysis = useCallback(() => {
+    setAnalyzing(true);
+    fetch(`${API}/trigger`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agent: "design-decision-tracker" }),
+    }).then(() => {
+      let attempts = 0;
+      const poll = setInterval(() => {
+        fetch(`${API}/decisions`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.decisions.length > 0 || ++attempts > 20) {
+              setDecisions(data.decisions);
+              setAnalyzing(false);
+              setLastAnalyzed(new Date());
+              clearInterval(poll);
+            }
+          });
+      }, 3000);
+    }).catch(() => setAnalyzing(false));
+  }, []);
 
   const debounceRef    = useRef(null);
   const initializedRef = useRef(false);
@@ -178,6 +204,71 @@ export default function App() {
             ))}
           </div>
         </Section>
+
+          <Section title="DECISION LOG">
+            {/* Trigger button */}
+            <button
+              onClick={triggerAnalysis}
+              disabled={analyzing || syncStatus === "offline"}
+              style={{
+                width: "100%", padding: "10px", marginBottom: "16px",
+                background: analyzing ? "#f3f4f6" : "#111",
+                color: analyzing ? "#9ca3af" : "white",
+                border: "none", borderRadius: "10px",
+                fontSize: "11px", fontFamily: MONO, letterSpacing: "0.1em",
+                cursor: analyzing ? "not-allowed" : "pointer",
+                transition: "background 0.2s",
+              }}
+            >
+              {analyzing ? "ANALYSING SESSION..." : "ANALYSE SESSION"}
+            </button>
+
+            {lastAnalyzed && (
+              <div style={{ fontSize: "9px", fontFamily: MONO, color: "#9ca3af", marginBottom: "12px" }}>
+                Last analysed: {lastAnalyzed.toLocaleTimeString()}
+              </div>
+            )}
+
+            {/* ESCALATE alerts */}
+            {decisions.filter(d => d.status === "ESCALATE").map(d => (
+              <div key={d.id} style={{
+                background: "#fef2f2", border: "1px solid #fca5a5",
+                borderRadius: "10px", padding: "10px 14px", marginBottom: "8px",
+                fontSize: "11px", fontFamily: MONO, color: "#b91c1c",
+              }}>
+                ⚠ MDR-{d.id}: {d.title}
+                <div style={{ fontSize: "10px", color: "#6b7280", marginTop: "4px" }}>{d.what}</div>
+              </div>
+            ))}
+
+            {/* Empty state */}
+            {decisions.length === 0 && !analyzing && (
+              <div style={{ fontSize: "11px", fontFamily: MONO, color: "#9ca3af", textAlign: "center", padding: "20px 0" }}>
+                No decisions logged yet
+              </div>
+            )}
+
+            {/* Decision list */}
+            {decisions.map(d => {
+              const color = d.status === "ESCALATE" ? "#ef4444"
+                          : d.status === "FLAGGED"  ? "#f59e0b"
+                          : "#10b981";
+              return (
+                <div key={d.id} style={{
+                  borderLeft: `3px solid ${color}`,
+                  paddingLeft: "12px", marginBottom: "12px",
+                }}>
+                  <div style={{ fontSize: "10px", fontFamily: MONO, color: "#374151", fontWeight: "700" }}>
+                    MDR-{d.id} · {d.nature} · {d.scope}
+                    <span style={{ color, marginLeft: "8px" }}>{d.status}</span>
+                  </div>
+                  <div style={{ fontSize: "11px", fontFamily: SANS, color: "#6b7280", marginTop: "2px" }}>
+                    {d.what}
+                  </div>
+                </div>
+              );
+            })}
+          </Section>
 
         <div style={{ textAlign: "center", fontSize: "9px", color: "#c4c4bc", fontFamily: MONO, letterSpacing: "0.12em" }}>
           HCI RESEARCH — PROGRAMMING WITH AI

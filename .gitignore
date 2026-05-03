@@ -6,5 +6,6 @@ cases/
 **/config/perspective-result.json
 .DS_Store
 dist/
-.claude/
+**/.claude/settings.local.json
+**/.claude/settings.json
 **/.env*
