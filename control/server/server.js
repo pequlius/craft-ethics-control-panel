@@ -7,9 +7,14 @@ const os = require("os");
 const app = express();
 const PORT = 3333;
 const CONFIG_PATH   = path.join(__dirname, "..", "config", "agent-config.json");
+const DEFAULT_PATH  = path.join(__dirname, "..", "config", "agent-config.default.json");
 const PROMPT_PATH   = path.join(__dirname, "..", "config", "agent-prompt.txt");
 const TRIGGER_PATH  = path.join(__dirname, "..", "config", "perspective-trigger.json");
 const RESULT_PATH   = path.join(__dirname, "..", "config", "perspective-result.json");
+
+if (!fs.existsSync(CONFIG_PATH)) {
+  fs.copyFileSync(DEFAULT_PATH, CONFIG_PATH);
+}
 
 app.use(cors({ origin: /^http:\/\/localhost(:\d+)?$/ }));
 app.use(express.json());
