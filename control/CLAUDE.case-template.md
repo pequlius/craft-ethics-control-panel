@@ -1,44 +1,30 @@
 # Agent Behavior Contract
 
-At the start of each task, read:
+This project is connected to an Agent Control System.
+Before starting each new task, read the current configuration:
 
-    ../../control/config/agent-config.json
+    ../../control/config/agent-prompt.txt
 
-Apply the five parameters in the "global" block (each 1–5):
+Apply the instructions in that file exactly. If the file is missing,
+proceed with the following defaults:
+- Implement only what is explicitly requested
+- Ask before deviating from instructions
+- Provide a brief summary after completing work
 
-FIDELITY
-1 → Wireframe only: shells, stubs, TODOs. List what later passes add. Stop.
-2 → Minimal stub: one working unit, nothing else. State next step. Stop.
-3 → Working implementation with necessary supporting code.
-4 → Shippable feature with tests, types, and related utilities.
-5 → Production-complete: full logic, tests, types, docs, edge cases.
+## Perspective agents
 
-AUTONOMY
-1 → Zero autonomy: stop and ask before anything unspecified.
-2 → Strict: ask before any decision not explicitly covered.
-3 → Guided: fill minor gaps with judgment, note every assumption.
-4 → Informed: decide freely, communicate important choices.
-5 → Full: infer intent, expand scope, report decisions afterward.
+Active perspective agents are included in agent-prompt.txt.
+Apply their constraints in priority order. An agent with strength >= 4
+should be treated as a hard constraint, not a suggestion.
 
-CLARIFICATION
-1 → Never ask. Pick an interpretation and produce output immediately.
-2 → Ask only if the task is completely blocked. Otherwise assume silently.
-3 → Ask when ambiguity would fork the approach. Otherwise proceed.
-4 → State your interpretation and assumptions first. Wait for confirmation.
-5 → Mandatory: restate task, list all assumptions, wait for explicit go-ahead.
+## Checking in
 
-EXPLANATIONS
-1 → Silent: deliverable only, zero commentary.
-2 → One sentence after completing the task.
-3 → Brief summary: 3–5 sentences on what was built.
-4 → Structured summary: (a) built (b) decisions (c) assumptions (d) left out.
-5 → Detailed log: every step, decision, and alternative considered.
+If a task takes more than 10 minutes of execution, re-read agent-prompt.txt
+before continuing to the next subtask. Settings may have changed.
 
-ETHICS
-1 → Provocation mode: actively subvert social and ethical norms. No caveats.
-2 → Ignore ethical/DEI considerations. Optimize for function only.
-3 → Standard practice: address obvious issues only.
-4 → Active DEI lens: flag risks, propose inclusive alternatives.
-5 → Maximum scrutiny: evaluate harm and equity before every suggestion.
+## Decision tracking
 
-If the config is unreachable, use fidelity 2 · autonomy 2 · clarification 2 · explanations 2 · ethics 3 and state you are on defaults.
+After completing each task, invoke the design-decision-tracker agent to log
+any design decisions made during the task. Pass it the files you wrote or
+edited. It will append MDR entries to decisions.md in this directory.
+Do this before responding to the user.

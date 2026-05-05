@@ -171,11 +171,19 @@ app.get("/result", (req, res) => {
   }
 });
 
-const DECISIONS_PATH = path.join(__dirname, "..", "..", "docs", "decisions", "decisions.md");
+function decisionsPath() {
+  try {
+    const cfg = readConfig();
+    const c = cfg.current_case || "case-01";
+    return path.join(__dirname, "..", "..", "cases", c, "decisions.md");
+  } catch {
+    return path.join(__dirname, "..", "..", "cases", "case-01", "decisions.md");
+  }
+}
 
 app.get("/decisions", (req, res) => {
   try {
-    const raw = fs.readFileSync(DECISIONS_PATH, "utf8");
+    const raw = fs.readFileSync(decisionsPath(), "utf8");
     res.json({ decisions: parseMDRs(raw) });
   } catch {
     res.json({ decisions: [] });

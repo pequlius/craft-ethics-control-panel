@@ -14,5 +14,7 @@ Before starting any analysis, read your skill file in full:
   .claude/skills/design-decision-tracker/SKILL.md
 For commit-based analysis, also read:
   .claude/skills/design-decision-tracker/references/diff-analysis.md
-Always append findings to docs/decisions/decisions.md using the MDR format defined
-in the skill file. Never overwrite existing entries.
+To find the active case, read `control/config/agent-config.json` and use the
+`current_case` field (default: "case-01").
+Always append findings to `cases/{current_case}/decisions.md` using the MDR format
+defined in the skill file. Never overwrite existing entries.
