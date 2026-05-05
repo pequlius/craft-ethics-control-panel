@@ -6,9 +6,11 @@ An experimental system for steering AI agent behaviour in real time during progr
 
 ## What it does
 
-The system lets you configure how a Claude Code agent behaves before and during a task — without editing prompts manually. Settings are stored in a JSON config file that the agent reads directly at the start of each task and applies immediately.
+The system lets you configure how a Claude Code agent behaves before and during a task — without editing prompts manually. Settings are stored in a JSON config file and compiled into a plain-text prompt file (`agent-prompt.txt`) that the agent reads directly at the start of each task.
 
-You control five global behavioural dimensions through a browser-based GUI. Changes take effect on the next step — the agent always reads the latest values and never caches previous settings.
+You control five global behavioural dimensions and three perspective agents through a browser-based GUI. Changes take effect on the next step — the agent always reads the latest values from disk.
+
+A decision tracker sub-agent automatically logs design decisions made during each case session to a `decisions.md` file in that case folder.
 
 ---
 
@@ -18,21 +20,28 @@ You control five global behavioural dimensions through a browser-based GUI. Chan
 craft-ethics-control-panel/
 ├── cases/                               # One folder per session (gitignored)
 │   └── case-01/
-│       └── CLAUDE.md                    # Compact behaviour contract for this case
+│       ├── CLAUDE.md                    # Behaviour contract for this case
+│       ├── decisions.md                 # Auto-generated decision log (MDR format)
+│       └── .claude/
+│           └── settings.local.json      # Hooks: kontrollpanel loader
 │
 ├── control/                             # The control system
-│   ├── CLAUDE.md                        # Full reference behaviour contract
-│   ├── CLAUDE.case-template.md          # Compact template copied into new cases
+│   ├── CLAUDE.case-template.md          # Template copied into new cases
 │   ├── config/
-│   │   ├── agent-config.json            # Live config (gitignored, read by agent)
-│   │   └── agent-config.default.json    # Default values (used by reset script)
+│   │   ├── agent-config.json            # Live config (gitignored)
+│   │   ├── agent-config.default.json    # Default values
+│   │   └── agent-prompt.txt             # Compiled instructions (gitignored, read by agent)
 │   ├── gui/                             # React + Vite frontend
 │   │   └── src/App.jsx
 │   ├── server/
-│   │   └── server.js                    # Express API server (port 3333)
+│   │   └── server.js                    # Express API (port 3333)
 │   └── scripts/
 │       ├── new-case.js                  # Creates a new numbered case folder
 │       └── reset.js                     # Resets config to defaults
+│
+├── .claude/
+│   └── agents/
+│       └── design-decision-tracker.md  # Decision tracker sub-agent definition
 │
 ├── start.bat                            # Starts server + GUI (Windows)
 └── new-case.bat                         # Creates a new case folder (Windows)
@@ -44,13 +53,15 @@ craft-ethics-control-panel/
 
 ### 1. Install dependencies
 
-```bash
-cd control
-npm install
+Run this once after cloning:
 
-cd gui
-npm install
+```bash
+cd control && npm install
+cd server && npm install
+cd ../gui && npm install
 ```
+
+Or just double-click **`start.bat`** — it installs nothing automatically, so run the above first.
 
 ### 2. Start the system
 
@@ -64,16 +75,18 @@ This starts both services in parallel:
 
 | Service | URL |
 |---------|-----|
-| API server | http://localhost:3333 |
-| Control panel GUI | http://localhost:5173 |
+| API server | `http://localhost:3333` |
+| Control panel GUI | `http://localhost:5173` |
 
 Open **http://localhost:5173** in your browser.
+
+> **Note:** If the project is stored inside an OneDrive-synced folder, you may get `EPERM` errors from npm. Move the project to a local path (e.g. `C:\dev\`) to avoid this.
 
 ---
 
 ## The control panel
 
-The GUI lets you configure agent behaviour without touching any files. Changes are saved automatically (500 ms debounce). A dot in the bottom bar shows sync state: green = saved, yellow = saving, red = server unreachable.
+The GUI lets you configure agent behaviour without touching any files. Changes are saved automatically (500 ms debounce) and compiled to `control/config/agent-prompt.txt` on every save. A dot in the bottom bar shows sync state: green = saved, yellow = saving, red = server unreachable.
 
 ### Parameters
 
@@ -81,11 +94,23 @@ Five sliders, each on a scale of 1–5:
 
 | Parameter | Low (1) | High (5) | What it controls |
 |-----------|---------|----------|-----------------|
-| **Fidelity** | Sketch | Complete | How finished the output is per prompt. Low = wireframe outlines and stubs only, built up incrementally. High = production-ready in one pass. |
-| **Autonomy** | Strict | Free | How much the agent infers versus asks. Low = stops and asks for every unspecified detail. High = acts fully independently and reports afterward. |
-| **Clarification** | Assumes | Asks | Whether the agent clarifies before starting. Low = picks an interpretation and proceeds immediately. High = mandatory restatement and approval before any code is written. |
-| **Explanations** | Silent | Detailed | How much the agent documents its work. Low = output only, no commentary. High = thorough log of every step, decision, and alternative considered. |
-| **Ethical Awareness** | Provocative | Aware | How much ethical and social considerations shape the output. Low = design provocation mode, actively challenges norms. High = full ethical scrutiny, flags and blocks suggestions with significant risk. |
+| **Fidelity** | Sketch | Complete | How finished the output is per prompt. Low = wireframe outlines and stubs only. High = production-ready in one pass. |
+| **Autonomy** | Strict | Free | How much the agent infers versus asks. Low = stops at every unspecified detail. High = acts fully independently. |
+| **Clarification** | Assumes | Asks | Whether the agent clarifies before starting. Low = picks an interpretation and proceeds. High = mandatory restatement and approval before writing anything. |
+| **Explanations** | Silent | Detailed | How much the agent documents its work. Low = output only. High = thorough log of every step and decision. |
+| **Ethical Awareness** | Provocative | Aware | How much ethical and social considerations shape the output. Low = design provocation mode. High = full ethical scrutiny. |
+
+### Perspective agents
+
+Three optional sub-agents that run alongside the main agent:
+
+| Agent | Role |
+|-------|------|
+| **Consequence** | Weighs consequences, bias, and EDI factors |
+| **Resources** | Flags token-expensive or resource-heavy patterns |
+| **Craftsmanship** | Promotes precision, good practices, and code quality |
+
+Each can be toggled on/off and given a strength (1–5). Strength ≥ 4 = hard constraint; lower = advisory flag only.
 
 ---
 
@@ -93,17 +118,28 @@ Five sliders, each on a scale of 1–5:
 
 Each case folder contains a `CLAUDE.md` file. When Claude Code opens a project inside a case folder it reads this file automatically.
 
-`CLAUDE.md` instructs the agent to read the config file directly:
+`CLAUDE.md` instructs the agent to read the compiled prompt file:
 
 ```
-../../control/config/agent-config.json
+../../control/config/agent-prompt.txt
 ```
 
-The agent reads the five parameters in the `global` block and applies them according to the behaviour descriptions in `CLAUDE.md`. No server call is needed — the config is a plain JSON file on disk.
+This file is written to disk by the server on every config save and on startup — no network call needed. It works on any machine, including those where newer Claude versions restrict HTTP access.
 
-If the config file is unreachable the agent falls back to:
-`fidelity 2 · autonomy 2 · clarification 2 · explanations 2 · ethics 3`
-and states this at the start of the response.
+If the file is unreachable the agent falls back to built-in defaults and states this at the start of the response.
+
+---
+
+## Decision tracking
+
+Each case session has a `decisions.md` file that records design decisions in MDR (Micro Decision Record) format. The `design-decision-tracker` sub-agent populates this file automatically after each completed task.
+
+The tracker is invoked by the case agent (per the instruction in `CLAUDE.md`) — no manual triggering needed. Each MDR captures:
+
+- What was decided and why
+- Alternatives not considered
+- Whether the user was consulted
+- Escalation status (`LOGGED` or `FLAGGED`)
 
 ---
 
@@ -111,22 +147,21 @@ and states this at the start of the response.
 
 ### Create a new case
 
-Double-click **`new-case.bat`** in the root folder, or from the `control/` directory:
+Double-click **`new-case.bat`**, or from `control/`:
 
 ```bash
 npm run new-case
 ```
 
-This creates the next numbered folder under `cases/` (e.g. `cases/case-08/`) and copies the compact `CLAUDE.case-template.md` into it as `CLAUDE.md`. Open the new case folder in Claude Code to start a session with the behaviour contract active.
+Creates the next numbered folder under `cases/` (e.g. `cases/case-04/`), copies the behaviour contract template into it as `CLAUDE.md`, creates an empty `decisions.md`, and generates a `.claude/settings.local.json` with the kontrollpanel hook. Sets `current_case` in the config.
 
 ### Reset config to defaults
 
 ```bash
-cd control
-npm run reset
+cd control && npm run reset
 ```
 
-Copies `agent-config.default.json` over `agent-config.json`. Useful at the start of a new session or when you want a clean baseline.
+Copies `agent-config.default.json` over `agent-config.json` and regenerates `agent-prompt.txt`.
 
 ---
 
@@ -137,8 +172,11 @@ The server exposes endpoints on `http://localhost:3333` used by the GUI:
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/config` | Returns the full config JSON |
-| `PUT` | `/config` | Saves a new config (body: full config object) |
+| `PUT` | `/config` | Saves a new config and regenerates `agent-prompt.txt` |
 | `GET` | `/config/prompt` | Returns compiled system instructions as plain text |
+| `GET` | `/decisions` | Returns parsed MDR entries from the current case |
+| `POST` | `/trigger` | Writes a perspective-agent trigger file |
+| `GET` | `/result` | Returns the latest perspective-agent analysis result |
 
 ---
 
@@ -148,5 +186,6 @@ The server exposes endpoints on `http://localhost:3333` used by the GUI:
 2. Open the control panel at **http://localhost:5173** and set parameters for the session.
 3. Double-click `new-case.bat` to create a fresh case folder.
 4. Open the new case folder in Claude Code.
-5. Adjust parameters in the control panel as the session progresses — the agent picks up the latest values at the start of each new step.
-6. Run `npm run reset` in `control/` between sessions to restore defaults.
+5. Adjust parameters in the control panel as the session progresses — changes are picked up at the start of each new prompt.
+6. Review `decisions.md` in the case folder to see what decisions the agent made autonomously.
+7. Run `npm run reset` in `control/` between sessions to restore defaults.
