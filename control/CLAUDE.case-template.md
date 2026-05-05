@@ -24,7 +24,10 @@ before continuing to the next subtask. Settings may have changed.
 
 ## Decision tracking
 
-After completing each task, invoke the design-decision-tracker agent to log
-any design decisions made during the task. Pass it the files you wrote or
-edited. It will append MDR entries to decisions.md in this directory.
-Do this before responding to the user.
+Decision tracking is handled automatically by a PostToolUse hook in
+`.claude/settings.local.json`. The hook triggers the design-decision-tracker
+agent after every Write or Edit operation — no manual invocation needed.
+
+If settings.local.json is missing from this case folder, the hook will not
+run. In that case, invoke the design-decision-tracker agent manually after
+each task, passing the files you wrote or edited.
