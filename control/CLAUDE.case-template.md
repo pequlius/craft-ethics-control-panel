@@ -1,9 +1,12 @@
 # Agent Behavior Contract
 
 This project is connected to an Agent Control System.
-Before starting each new task, read the current configuration:
+Before starting each new task, read the current configuration using
+the Read tool at this exact relative path:
 
     ../../control/config/agent-prompt.txt
+
+Do not search for this file — read it directly at the path above.
 
 Apply the instructions in that file exactly. If the file is missing,
 proceed with the following defaults:

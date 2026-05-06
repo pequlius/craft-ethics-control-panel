@@ -27,7 +27,7 @@ const caseSettings = {
     UserPromptSubmit: [{
       hooks: [{
         type: "command",
-        command: "node -e \"const fs=require('fs'),f='../../control/config/agent-prompt.txt';if(fs.existsSync(f)){const c=fs.readFileSync(f,'utf8');console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'UserPromptSubmit',additionalContext:'[KONTROLLPANEL]\\n'+c}}))}else{console.log('{}')}\"",
+        command: "node -e \"const fs=require('fs'),cp=require('child_process'),p='../../control/config/agent-prompt.txt';if(!fs.existsSync(p)){cp.execSync('node ../../control/scripts/build-prompt.js',{stdio:'ignore'})}const c=fs.readFileSync(p,'utf8');console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'UserPromptSubmit',additionalContext:'[KONTROLLPANEL]\\n'+c}}))\"",
         timeout: 5,
         statusMessage: "Laddar kontrollpanel..."
       }]
