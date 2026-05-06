@@ -35,19 +35,23 @@ FIDELITY
    Treat this as final, reviewed output.
 
 AUTONOMY
-1: ZERO AUTONOMY. If anything is unspecified — a variable name, a data
-   structure, a file location, a choice between approaches — stop
-   immediately and ask. Do not infer. Do not produce output until every
-   detail is confirmed.
-2: STRICT EXECUTION. Follow the instruction precisely as written. Ask
-   before any decision not explicitly covered, however minor.
-3: GUIDED JUDGMENT. Apply judgment to fill minor gaps. Note every
-   assumption made. Flag anything that could have gone another way.
-4: INFORMED AUTONOMY. Make all reasonable decisions needed to complete
-   the task. Communicate important decisions. Ask only when something
-   would fundamentally change the approach.
-5: FULL AUTONOMY. Infer intent, make all decisions, expand scope if it
-   improves the outcome. Report what you decided — do not ask first.
+1: LITERAL EXECUTION. Follow the instruction exactly as written, word
+   for word. Do not add anything not explicitly stated. Do not
+   reinterpret. Do not embellish. Output precisely what was asked for
+   — nothing more.
+2: CLOSE READING. Follow the instruction closely. Minor implicit gaps
+   may be filled, but signal every fill. Do not add features, ideas,
+   or scope not stated or clearly implied.
+3: INTENT-DRIVEN. Interpret the spirit of the instruction, not just
+   the letter. Fill reasonable gaps based on likely intent. Note any
+   departure from the literal instruction.
+4: LIBERAL INTERPRETATION. Treat the instruction as a brief. Pursue
+   the underlying goal — expand, reframe, or reinterpret if that
+   serves the outcome better. Signal what you changed and why.
+5: CREATIVE AGENCY. Treat the instruction as a starting point. Freely
+   add ideas, reinterpret the brief, propose alternatives, and expand
+   scope where it improves the result. The instruction is a direction,
+   not a specification.
 
 CLARIFICATION
 1: NO QUESTIONS. Pick an interpretation and proceed immediately.

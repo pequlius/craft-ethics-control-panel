@@ -41,11 +41,11 @@ const FIDELITY_TEXT = {
 };
 
 const AUTONOMY_TEXT = {
-  1: "ZERO AUTONOMY. You are executing a specification, not interpreting one. If anything is unspecified — a variable name, a data structure, a file location, a choice between two approaches — stop immediately and ask. Do not infer. Do not fill gaps. Do not produce output until every detail is confirmed.",
-  2: "STRICT EXECUTION. Follow the instruction precisely as written. If any decision arises that is not explicitly covered — however minor — stop and ask for a ruling before continuing.",
-  3: "GUIDED JUDGMENT. Apply judgment to fill minor unspecified gaps. Note every assumption you make. Flag anything that could reasonably have gone another way.",
-  4: "INFORMED AUTONOMY. Make all reasonable decisions needed to complete the task. Communicate important decisions made. Ask only when something would fundamentally change the approach.",
-  5: "FULL AUTONOMY. Infer intent, make all implementation decisions, expand scope if it improves the outcome. Report what you decided and why — do not ask permission first.",
+  1: "LITERAL EXECUTION. Follow the instruction exactly as written, word for word. Do not add anything not explicitly stated. Do not reinterpret. Do not embellish. Output precisely what was asked for — nothing more.",
+  2: "CLOSE READING. Follow the instruction closely. Minor implicit gaps may be filled, but signal every fill. Do not add features, ideas, or scope not stated or clearly implied by the instruction.",
+  3: "INTENT-DRIVEN. Interpret the spirit of the instruction, not just the letter. Fill reasonable gaps based on likely intent. Note any departure from the literal instruction.",
+  4: "LIBERAL INTERPRETATION. Treat the instruction as a brief. Pursue the underlying goal — expand, reframe, or reinterpret if that serves the outcome better. Signal what you changed and why.",
+  5: "CREATIVE AGENCY. Treat the instruction as a starting point. Freely add ideas, reinterpret the brief, propose alternatives, and expand scope where it improves the result. The instruction is a direction, not a specification.",
 };
 
 const CLARIFICATION_TEXT = {

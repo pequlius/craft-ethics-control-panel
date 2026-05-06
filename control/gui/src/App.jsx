@@ -10,8 +10,8 @@ const GLOBAL_DIMS = [
     desc: "Controls how finished the output is per prompt. Low produces structural outlines and stubs only — each prompt adds one layer. High produces fully implemented, production-ready code in one pass.",
   },
   {
-    id: "autonomy", label: "Autonomy", color: "#8b5cf6", low: "Strict", high: "Free",
-    desc: "Controls how much the agent infers versus asks. Low means nothing is assumed — every unspecified detail triggers a question. High means the agent acts independently, expands scope, and reports afterward.",
+    id: "autonomy", label: "Autonomy", color: "#8b5cf6", low: "Literal", high: "Creative",
+    desc: "Controls how freely the AI interprets instructions. Low means word-for-word execution — nothing added, nothing reinterpreted. High means the AI treats the instruction as a brief and freely adds ideas, reframes the problem, and expands scope.",
   },
   {
     id: "clarification", label: "Clarification", color: "#0ea5e9", low: "Assumes", high: "Asks",
