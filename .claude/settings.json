@@ -1,0 +1,43 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node control/scripts/inject-context.js",
+            "timeout": 10,
+            "statusMessage": "Laddar kontrollpanel..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node control/scripts/guard-write.js",
+            "timeout": 5,
+            "statusMessage": "Kontrollerar läge..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "agent",
+            "if": "Bash(git commit*)",
+            "prompt": "A git commit was just made. Act as the design-decision-tracker agent. First read .claude/skills/design-decision-tracker/SKILL.md, then .claude/skills/design-decision-tracker/references/diff-analysis.md. Read control/config/agent-config.json to get current_case. Run 'git log -1 --stat' and 'git show HEAD' to analyze the commit. Append any design decisions as MDRs to cases/{current_case}/decisions.md. Never overwrite existing entries. If there are no meaningful design decisions, write nothing.",
+            "timeout": 120,
+            "statusMessage": "Spårar designbeslut..."
+          }
+        ]
+      }
+    ]
+  }
+}
