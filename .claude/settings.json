@@ -27,12 +27,11 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "agent",
-            "if": "Bash(git commit*)",
-            "prompt": "A git commit was just made. Act as the design-decision-tracker agent. First read .claude/skills/design-decision-tracker/SKILL.md, then .claude/skills/design-decision-tracker/references/diff-analysis.md. Read control/config/agent-config.json to get current_case. Run 'git log -1 --stat' and 'git show HEAD' to analyze the commit. Append any design decisions as MDRs to cases/{current_case}/decisions.md. Never overwrite existing entries. If there are no meaningful design decisions, write nothing.",
+            "prompt": "A file was just written or edited in a case folder. Act as the design-decision-tracker agent. Read .claude/skills/design-decision-tracker/SKILL.md. Read control/config/agent-config.json to get current_case. Read the tool result to identify which file was changed — if it is not inside cases/{current_case}/, do nothing and stop. Otherwise analyze the change for design decisions. Append any decisions as MDRs to cases/{current_case}/decisions.md. Never overwrite existing entries. If there are no meaningful design decisions, write nothing.",
             "timeout": 120,
             "statusMessage": "Spårar designbeslut..."
           }
