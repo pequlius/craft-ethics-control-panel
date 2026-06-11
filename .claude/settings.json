@@ -24,19 +24,6 @@
           }
         ]
       }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "agent",
-            "prompt": "A file was just written or edited. Act as the design-decision-tracker agent. First read .claude/skills/design-decision-tracker/SKILL.md. Then read control/config/agent-config.json to get current_case. Then list the files in cases/{current_case}/ to find recently modified files and read them. Analyze the content for design decisions — choices about structure, layout, data model, libraries, interaction patterns, visual style, or technical architecture. Every non-trivial choice counts. Append your findings as MDRs to cases/{current_case}/decisions.md. Never overwrite existing entries. If the modified file is clearly not in the active case folder, do nothing.",
-            "timeout": 120,
-            "statusMessage": "Spårar designbeslut..."
-          }
-        ]
-      }
     ]
   }
 }

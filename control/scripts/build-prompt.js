@@ -59,6 +59,7 @@ function buildPrompt(config) {
   lines.push(`[CLARIFICATION] ${CLARIFICATION_TEXT[g.clarification ?? 2]}`);
   lines.push(`[EXPLANATIONS] ${EXPLANATIONS_TEXT[g.explanations ?? 3]}`);
   lines.push(`[ETHICS] ${ETHICS_TEXT[g.ethics ?? 3]}`);
+  lines.push(`[DECISION TRACKING] After completing each task, read .claude/skills/design-decision-tracker/SKILL.md and append any design decisions you made to cases/${config.current_case ?? "case-01"}/decisions.md as MDR entries. Only log decisions that involved a real choice between alternatives — structure, layout, data model, libraries, interaction patterns, visual style, or technical architecture. Do this before responding to the user. If there are no meaningful decisions, skip it.`);
 
   return lines.join("\n").trim();
 }
