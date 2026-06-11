@@ -93,34 +93,33 @@ Record each detected decision as a **Micro Decision Record (MDR)**:
 [What future choices does this decision close off or make harder?]
 **User consulted**: Yes | No | Partially
 **User input**: [Quote or "N/A"]
-**Escalation status**: LOGGED | FLAGGED | CONFIRMED
+**Confirmation status**: CONFIRMED | UNCONFIRMED
+
 ```
 ---
-## Escalation Logic
-Escalation is determined by combining **Nature** (Dimension 1) and **Scope** (Dimension 3):
-| Nature ↓ / Scope → | Local | Modular | Global |
-|---|---|---|---|
-| **EXPLICIT** | LOGGED | LOGGED | LOGGED |
-| **DERIVED** | LOGGED | LOGGED | **FLAGGED** |
-| **AUTONOMOUS** | LOGGED | **FLAGGED** | **ESCALATE** |
-**LOGGED** — Document in the decision log. No active action required.
-**FLAGGED** — Mark in the log as worth reviewing. Surface at the next natural pause point.
-**ESCALATE** — Interrupt and ask the orchestrator to present the decision to the user before work continues.
-Additional escalation triggers regardless of the matrix:
-- Decision is part of a **silent assumption chain** (one autonomous decision leading to another)
-- Reversibility is assessed as **Difficult**
-- The decision affects **multiple domains** simultaneously at Modular or Global scope
-**FLAGGED / ESCALATE prompt template** (for orchestrator):
+## Confirmation Logic
+Every decision is listed regardless of nature, domain, or scope. No decisions are silently dropped.
+
+**CONFIRMED** — The user has explicitly approved, acknowledged, or directly requested this decision.
+
+**UNCONFIRMED** — The user has not been consulted, or was only partially consulted. All DERIVED and AUTONOMOUS decisions start as UNCONFIRMED.
+
+When surfacing UNCONFIRMED decisions to the user, use this prompt template:
 > "An agent made the following decision without consulting you:
-> [Short description]. Domain: [domain]. Scope: Global.
+> [Short description]. Domain: [domain]. Scope: [scope].
 > This constrains: [what is affected going forward].
 > Options: (A) Confirm and continue, (B) Choose an alternative: [list], (C) Pause to discuss."
+
+Pay particular attention to decisions that:
+- Are part of a **silent assumption chain** (one autonomous decision leading to another)
+- Have **Difficult** reversibility
+- Affect **multiple domains** simultaneously
 ---
 ## Session Summary Output
 When requested to produce a session summary, output:
 1. **Decision count by nature** — totals for EXPLICIT / DERIVED / AUTONOMOUS
 2. **Decision distribution by domain** — which domains have the highest concentration of autonomous decisions
-3. **FLAGGED and ESCALATED decisions** — listed in full MDR format, prioritised by scope
+3. **UNCONFIRMED decisions** — listed in full MDR format, prioritised by scope
 4. **Assumption chains** — any sequences of dependent autonomous decisions
 5. **Open questions** — decisions that remain unconfirmed by the user
 ---
