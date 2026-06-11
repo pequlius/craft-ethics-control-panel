@@ -80,6 +80,10 @@ Record each detected decision as a **Micro Decision Record (MDR)**:
 Keep entries short. The log's power is in the list as a whole, so a long task should
 produce a visibly long list.
 
+**Language:** Write each MDR in the same language as the user's prompt — an English prompt
+gets an English entry, a Swedish prompt a Swedish entry. There is no default language; match
+the user.
+
 ---
 
 ## What counts as a decision
