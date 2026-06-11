@@ -103,7 +103,7 @@ export default function App() {
               setDecisions(d.decisions);
               setLastAnalyzed(new Date());
               // Open the generated HTML report in a new tab using the file path
-              window.open(`file://${data.path.replace(/\\/g, "/")}`, "_blank");
+              window.open(`${API}/report/view`, "_blank");
             });
         }
       })

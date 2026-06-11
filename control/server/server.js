@@ -288,6 +288,21 @@ function escHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+app.get("/report/view", (req, res) => {
+  try {
+    const cfg        = readConfig();
+    const caseId     = cfg.current_case || "case-01";
+    const reportPath = path.join(__dirname, "..", "..", "cases", caseId, "session-report.html");
+    if (!fs.existsSync(reportPath)) {
+      return res.status(404).send("<p>Rapport saknas — klicka på Analyse Session först.</p>");
+    }
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(fs.readFileSync(reportPath, "utf8"));
+  } catch (err) {
+    res.status(500).send("<p>Kunde inte läsa rapporten.</p>");
+  }
+});
+
 app.get("/config/prompt", (req, res) => {
   try {
     const config = readConfig();
