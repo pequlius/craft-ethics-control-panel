@@ -167,6 +167,127 @@ function parseMDRs(raw) {
     });
 }
 
+app.post("/report", (req, res) => {
+  try {
+    const cfg        = readConfig();
+    const caseId     = cfg.current_case || "case-01";
+    const caseDir    = path.join(__dirname, "..", "..", "cases", caseId);
+    const decPath    = path.join(caseDir, "decisions.md");
+    const reportPath = path.join(caseDir, "session-report.html");
+
+    const raw  = fs.existsSync(decPath) ? fs.readFileSync(decPath, "utf8") : "";
+    const mdrs = parseMDRs(raw);
+
+    const unconfirmed = mdrs.filter(d => d.status === "UNCONFIRMED");
+    const confirmed   = mdrs.filter(d => d.status === "CONFIRMED");
+
+    const mdrCard = (d) => `
+      <div class="card ${d.status === "UNCONFIRMED" ? "unconfirmed" : "confirmed"}">
+        <div class="card-header">
+          <span class="mdr-id">MDR-${d.id}</span>
+          <span class="badge ${d.status === "UNCONFIRMED" ? "badge-warn" : "badge-ok"}">${d.status}</span>
+          <span class="nature">${d.nature}</span>
+          <span class="scope">${d.scope}</span>
+        </div>
+        <div class="card-title">${escHtml(d.title)}</div>
+        <div class="card-what">${escHtml(d.what)}</div>
+      </div>`;
+
+    const html = `<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Session Report — ${caseId}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f9f7f4; --surface: #fff; --border: #e5e1db;
+      --ink: #1a1208; --muted: #8a8070; --warn: #b45309; --ok: #166534;
+      --warn-bg: #fffbeb; --ok-bg: #f0fdf4; --warn-border: #fcd34d; --ok-border: #86efac;
+      --mono: "JetBrains Mono", "Fira Code", monospace;
+      --sans: "Inter", system-ui, sans-serif;
+    }
+    body { background: var(--bg); color: var(--ink); font-family: var(--sans); padding: 48px 24px 80px; }
+    .page { max-width: 760px; margin: 0 auto; }
+    header { margin-bottom: 40px; border-bottom: 1px solid var(--border); padding-bottom: 24px; }
+    .label { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em; }
+    .meta { font-size: 0.82rem; color: var(--muted); margin-top: 6px; }
+    .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 40px; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; }
+    .stat-n { font-family: var(--mono); font-size: 2rem; font-weight: 700; }
+    .stat-n.warn { color: var(--warn); }
+    .stat-n.ok   { color: var(--ok); }
+    .section-title { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .cards { display: flex; flex-direction: column; gap: 12px; margin-bottom: 40px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; border-left: 4px solid var(--border); }
+    .card.unconfirmed { border-left-color: var(--warn); background: var(--warn-bg); }
+    .card.confirmed   { border-left-color: var(--ok);   background: var(--ok-bg); }
+    .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .mdr-id { font-family: var(--mono); font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+    .badge { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; font-weight: 700; }
+    .badge-warn { background: var(--warn-border); color: var(--warn); }
+    .badge-ok   { background: var(--ok-border);   color: var(--ok); }
+    .nature, .scope { font-size: 0.72rem; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; }
+    .card-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .card-what { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+    .empty { color: var(--muted); font-size: 0.9rem; font-style: italic; padding: 16px 0; }
+    footer { font-size: 0.72rem; color: var(--muted); font-family: var(--mono); text-align: center; border-top: 1px solid var(--border); padding-top: 20px; margin-top: 40px; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="label">Session Report</div>
+    <h1>${caseId}</h1>
+    <div class="meta">Generated ${new Date().toLocaleString("sv-SE")} &middot; ${mdrs.length} decision${mdrs.length !== 1 ? "s" : ""} logged</div>
+  </header>
+
+  <div class="summary">
+    <div class="stat">
+      <div class="label">Totalt</div>
+      <div class="stat-n">${mdrs.length}</div>
+    </div>
+    <div class="stat">
+      <div class="label">Ej bekräftade</div>
+      <div class="stat-n warn">${unconfirmed.length}</div>
+    </div>
+    <div class="stat">
+      <div class="label">Bekräftade</div>
+      <div class="stat-n ok">${confirmed.length}</div>
+    </div>
+  </div>
+
+  ${unconfirmed.length > 0 ? `
+  <div class="section-title">Ej bekräftade beslut (${unconfirmed.length})</div>
+  <div class="cards">${unconfirmed.map(mdrCard).join("")}</div>
+  ` : ""}
+
+  ${confirmed.length > 0 ? `
+  <div class="section-title">Bekräftade beslut (${confirmed.length})</div>
+  <div class="cards">${confirmed.map(mdrCard).join("")}</div>
+  ` : ""}
+
+  ${mdrs.length === 0 ? `<p class="empty">Inga beslut loggade ännu.</p>` : ""}
+
+  <footer>craft-ethics-control-panel &middot; ${caseId} &middot; ${new Date().toISOString()}</footer>
+</div>
+</body>
+</html>`;
+
+    fs.writeFileSync(reportPath, html, "utf8");
+    res.json({ path: reportPath, case: caseId, count: mdrs.length });
+  } catch (err) {
+    res.status(500).json({ error: "Could not generate report", detail: err.message });
+  }
+});
+
+function escHtml(s) {
+  if (!s) return "";
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 app.get("/config/prompt", (req, res) => {
   try {
     const config = readConfig();

@@ -92,25 +92,23 @@ export default function App() {
 
   const triggerAnalysis = useCallback(() => {
     setAnalyzing(true);
-    fetch(`${API}/trigger`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agent: "design-decision-tracker" }),
-    }).then(() => {
-      let attempts = 0;
-      const poll = setInterval(() => {
-        fetch(`${API}/decisions`)
-          .then(r => r.json())
-          .then(data => {
-            if (data.decisions.length > 0 || ++attempts > 20) {
-              setDecisions(data.decisions);
-              setAnalyzing(false);
+    fetch(`${API}/report`, { method: "POST" })
+      .then(r => r.json())
+      .then(data => {
+        if (data.path) {
+          // Reload decisions from the freshly-written decisions.md
+          return fetch(`${API}/decisions`)
+            .then(r => r.json())
+            .then(d => {
+              setDecisions(d.decisions);
               setLastAnalyzed(new Date());
-              clearInterval(poll);
-            }
-          });
-      }, 3000);
-    }).catch(() => setAnalyzing(false));
+              // Open the generated HTML report in a new tab using the file path
+              window.open(`file://${data.path.replace(/\\/g, "/")}`, "_blank");
+            });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setAnalyzing(false));
   }, []);
 
   const createCase = useCallback(() => {
