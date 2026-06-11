@@ -1,28 +1,17 @@
 # Agent Behavior Contract
 
-## Configuration
+This project uses a hook-based control system. At the start of each prompt,
+behavioral instructions are injected automatically as [KONTROLLPANEL] context.
+Apply those instructions directly — no file reading needed.
 
-At the start of each prompt, the current configuration is injected
-automatically as [KONTROLLPANEL] context. Apply those instructions
-directly — no file reading needed.
+## Fallback (if [KONTROLLPANEL] context is absent)
 
-If [KONTROLLPANEL] context is absent, read the configuration file:
+Read the configuration file:
 
-    control/config/agent-prompt.txt  (from project root)
-    ../../control/config/agent-prompt.txt  (from a case folder)
+    control/config/agent-prompt.txt
 
-If neither is available, apply these defaults:
+If that file is also missing, apply these defaults:
 - Implement only what is explicitly requested
 - Ask before deviating from instructions
 - Provide a brief summary after completing work
-
-## Checking in
-
-If a task takes more than 10 minutes of execution, the next prompt
-will re-inject the latest [KONTROLLPANEL] context automatically.
-
-## Decision tracking
-
-After completing each task, invoke the design-decision-tracker agent
-to log any design decisions made. It will append MDR entries to
-decisions.md in this directory. Do this before responding to the user.
+- ethics: 3 (standard professional practice)
