@@ -274,8 +274,8 @@ export default function App() {
               </div>
             )}
 
-            {/* ESCALATE alerts */}
-            {decisions.filter(d => d.status === "ESCALATE").map(d => (
+            {/* UNCONFIRMED alerts */}
+            {decisions.filter(d => d.status === "UNCONFIRMED").map(d => (
               <div key={d.id} style={{
                 background: "#fef2f2", border: "1px solid #fca5a5",
                 borderRadius: "10px", padding: "10px 14px", marginBottom: "8px",
@@ -295,9 +295,7 @@ export default function App() {
 
             {/* Decision list */}
             {decisions.map(d => {
-              const color = d.status === "ESCALATE" ? "#ef4444"
-                          : d.status === "FLAGGED"  ? "#f59e0b"
-                          : "#10b981";
+              const color = d.status === "UNCONFIRMED" ? "#f59e0b" : "#10b981";
               return (
                 <div key={d.id} style={{
                   borderLeft: `3px solid ${color}`,

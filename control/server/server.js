@@ -159,7 +159,9 @@ function parseMDRs(raw) {
       const title  = block.match(/^\d+:\s*(.+)/)?.[1]?.trim() ?? "";
       const nature = block.match(/\*\*Nature\*\*:\s*(\w+)/)?.[1] ?? "";
       const scope  = block.match(/\*\*Scope\*\*:\s*(\w+)/)?.[1] ?? "";
-      const status = block.match(/\*\*Escalation status\*\*:\s*(\w+)/)?.[1] ?? "LOGGED";
+      const status = block.match(/\*\*Confirmation status\*\*:\s*(\w+)/)?.[1]
+                 ?? block.match(/\*\*Escalation status\*\*:\s*(\w+)/)?.[1]  // legacy
+                 ?? "UNCONFIRMED";
       const what   = block.match(/\*\*What was decided\*\*:\n([^\n*]+)/)?.[1]?.trim() ?? "";
       return { id, title, nature, scope, status, what };
     });
