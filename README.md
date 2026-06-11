@@ -77,7 +77,7 @@ Five sliders, each on a scale of 1–5:
 | Parameter | Low (1) | High (5) | What it controls |
 |-----------|---------|----------|-----------------|
 | **Fidelity** | Sketch | Complete | How finished the output is per prompt. Low = wireframe outlines and stubs only. High = production-ready in one pass. |
-| **Autonomy** | Strict | Free | How much the agent infers versus asks. Low = stops at every unspecified detail. High = acts fully independently. |
+| **Autonomy** | Strict | Free | How freely the agent interprets instructions. Low = word-for-word execution, nothing added or reinterpreted. High = treats the instruction as a brief and freely adds ideas, reframes the problem, and expands scope. |
 | **Clarification** | Assumes | Asks | Whether the agent clarifies before starting. Low = picks an interpretation and proceeds. High = mandatory restatement and approval before writing anything. |
 | **Explanations** | Silent | Detailed | How much the agent documents its work. Low = output only. High = thorough log of every step and decision. |
 | **Ethical Awareness** | Provocative | Aware | How much ethical and social considerations shape the output. Low = design provocation mode. High = full ethical scrutiny. |
