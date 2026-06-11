@@ -16,12 +16,6 @@ If neither is available, apply these defaults:
 - Ask before deviating from instructions
 - Provide a brief summary after completing work
 
-## Perspective agents
-
-Active perspective agents are listed in the [KONTROLLPANEL] context.
-Apply their constraints in priority order. An agent with strength >= 4
-should be treated as a hard constraint, not a suggestion.
-
 ## Checking in
 
 If a task takes more than 10 minutes of execution, the next prompt

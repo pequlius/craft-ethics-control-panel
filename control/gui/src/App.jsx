@@ -81,10 +81,14 @@ const DEFAULT_GLOBALS = { fidelity: 3, autonomy: 2, clarification: 2, explanatio
 
 export default function App() {
   const [globals, setGlobals]       = useState(DEFAULT_GLOBALS);
+  const [mode, setMode]             = useState("admin");
+  const [currentCase, setCurrentCase] = useState("");
   const [syncStatus, setSyncStatus] = useState("loading");
   const [decisions, setDecisions]       = useState([]);
   const [analyzing, setAnalyzing]       = useState(false);
   const [lastAnalyzed, setLastAnalyzed] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [creatingCase, setCreatingCase] = useState(false);
 
   const triggerAnalysis = useCallback(() => {
     setAnalyzing(true);
@@ -109,9 +113,29 @@ export default function App() {
     }).catch(() => setAnalyzing(false));
   }, []);
 
+  const createCase = useCallback(() => {
+    setCreatingCase(true);
+    fetch(`${API}/new-case`, { method: "POST" })
+      .then(r => {
+        if (!r.ok) throw new Error("bad response");
+        return r.json();
+      })
+      .then(data => {
+        if (data.case) {
+          fullConfigRef.current = data.config;
+          setCurrentCase(data.case);
+          setMode("case");
+          setDecisions([]);
+          setLastAnalyzed(null);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCreatingCase(false));
+  }, []);
+
   const debounceRef    = useRef(null);
   const initializedRef = useRef(false);
-  // Preserve fields we don't expose in the UI (e.g. perspective_agents)
+  // Preserve fields we don't expose in the UI (e.g. current_case)
   const fullConfigRef  = useRef({});
 
   // Fetch config on mount
@@ -124,6 +148,8 @@ export default function App() {
       .then(data => {
         fullConfigRef.current = data;
         if (data.global) setGlobals(data.global);
+        setMode(data.mode === "case" ? "case" : "admin");
+        setCurrentCase(data.current_case || "");
         setSyncStatus("synced");
         initializedRef.current = true;
       })
@@ -141,7 +167,7 @@ export default function App() {
     setSyncStatus("saving");
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      const payload = { ...fullConfigRef.current, global: globals };
+      const payload = { ...fullConfigRef.current, global: globals, mode };
       fetch(`${API}/config`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -153,7 +179,7 @@ export default function App() {
         })
         .catch(() => setSyncStatus("offline"));
     }, 500);
-  }, [globals]);
+  }, [globals, mode]);
 
   const statusText  = { synced: "Synced", saving: "Saving...", loading: "Loading...", offline: "Offline" }[syncStatus];
   const statusColor = { synced: "#10b981", saving: "#f59e0b", loading: "#9ca3af", offline: "#ef4444" }[syncStatus];
@@ -174,21 +200,40 @@ export default function App() {
         )}
 
         {/* Header */}
-        <div style={{ marginBottom: "24px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
-            <h1 style={{ margin: 0, fontSize: "20px", color: "#111", fontWeight: "700", letterSpacing: "-0.02em" }}>
-              Agent Control
-            </h1>
-            <span style={{
-              fontSize: "8px", fontFamily: MONO, letterSpacing: "0.2em",
-              color: "white", background: "#111", padding: "3px 8px", borderRadius: "4px",
-            }}>
-              PROTOTYPE
-            </span>
+        <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+              <h1 style={{ margin: 0, fontSize: "20px", color: "#111", fontWeight: "700", letterSpacing: "-0.02em" }}>
+                Agent Control
+              </h1>
+              <span style={{
+                fontSize: "8px", fontFamily: MONO, letterSpacing: "0.2em",
+                color: "white", background: "#111", padding: "3px 8px", borderRadius: "4px",
+              }}>
+                PROTOTYPE
+              </span>
+            </div>
+            <div style={{ fontSize: "11px", color: "#9ca3af", fontFamily: MONO }}>
+              Configures the behaviour of the active agent
+            </div>
           </div>
-          <div style={{ fontSize: "11px", color: "#9ca3af", fontFamily: MONO }}>
-            Configures the behaviour of the active agent
-          </div>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            title="Settings"
+            aria-label="Settings"
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              padding: "4px", color: "#9ca3af", lineHeight: 0,
+              transition: "color 0.15s",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#111")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
         </div>
 
         {/* Global sliders */}
@@ -275,6 +320,87 @@ export default function App() {
         </div>
       </div>
 
+      {/* Settings modal */}
+      {settingsOpen && (
+        <div
+          onClick={() => setSettingsOpen(false)}
+          style={{
+            position: "fixed", inset: 0, background: "#0008",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "20px", zIndex: 50,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: "white", borderRadius: "20px", padding: "24px",
+              width: "100%", maxWidth: "420px",
+              boxShadow: "0 10px 40px #00000030",
+            }}
+          >
+            {/* Modal header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <div style={{ fontSize: "9px", fontFamily: MONO, letterSpacing: "0.22em", color: "#9ca3af" }}>
+                SETTINGS
+              </div>
+              <button
+                onClick={() => setSettingsOpen(false)}
+                aria-label="Close"
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: "#9ca3af", lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Mode */}
+            <div style={{ fontSize: "11px", fontFamily: MONO, color: "#374151", marginBottom: "8px" }}>Mode</div>
+            <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+              {["admin", "case"].map(m => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  style={{
+                    flex: 1, padding: "12px", borderRadius: "10px", cursor: "pointer",
+                    border: mode === m ? "2px solid #111" : "1px solid #e5e7eb",
+                    background: mode === m ? "#111" : "white",
+                    color: mode === m ? "white" : "#6b7280",
+                    fontSize: "11px", fontFamily: MONO, letterSpacing: "0.12em",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {m === "admin" ? "ADMIN" : "CASE"}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: "10px", fontFamily: MONO, color: "#9ca3af", lineHeight: "1.6", marginBottom: "24px" }}>
+              {mode === "case"
+                ? <>Active case: <strong style={{ color: "#374151" }}>{currentCase || "(none)"}</strong>. Edits are restricted to <code>cases/{currentCase || "…"}/</code>; behaviour parameters apply.</>
+                : <>Full access to the control panel and all files. Behaviour parameters do not constrain admin work.</>}
+            </div>
+
+            {/* Case management */}
+            <div style={{ fontSize: "11px", fontFamily: MONO, color: "#374151", marginBottom: "8px" }}>Case management</div>
+            <button
+              onClick={createCase}
+              disabled={creatingCase || syncStatus === "offline"}
+              style={{
+                width: "100%", padding: "12px",
+                background: creatingCase ? "#f3f4f6" : "white",
+                color: creatingCase ? "#9ca3af" : "#111",
+                border: "1px solid #e5e7eb", borderRadius: "10px",
+                fontSize: "11px", fontFamily: MONO, letterSpacing: "0.1em",
+                cursor: creatingCase || syncStatus === "offline" ? "not-allowed" : "pointer",
+              }}
+            >
+              {creatingCase ? "CREATING..." : "+ NEW CASE"}
+            </button>
+            <div style={{ fontSize: "10px", fontFamily: MONO, color: "#9ca3af", lineHeight: "1.6", marginTop: "8px" }}>
+              Creates the next numbered case folder, makes it the active case, and switches to Case mode.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Status bar */}
       <div style={{
         position: "fixed", bottom: 0, left: 0, right: 0,
@@ -289,6 +415,9 @@ export default function App() {
           transition: "background 0.3s",
         }} />
         {statusText}
+        <span style={{ marginLeft: "auto", color: "#9ca3af" }}>
+          {mode === "case" ? `CASE · ${currentCase || "—"}` : "ADMIN"}
+        </span>
       </div>
     </div>
   );

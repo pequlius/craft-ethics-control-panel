@@ -3,14 +3,14 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const { createNewCase } = require("../scripts/new-case");
 
 const app = express();
 const PORT = 3333;
 const CONFIG_PATH   = path.join(__dirname, "..", "config", "agent-config.json");
 const DEFAULT_PATH  = path.join(__dirname, "..", "config", "agent-config.default.json");
 const PROMPT_PATH   = path.join(__dirname, "..", "config", "agent-prompt.txt");
-const TRIGGER_PATH  = path.join(__dirname, "..", "config", "perspective-trigger.json");
-const RESULT_PATH   = path.join(__dirname, "..", "config", "perspective-result.json");
+const TRIGGER_PATH  = path.join(__dirname, "..", "config", "trigger.json");
 
 if (!fs.existsSync(CONFIG_PATH)) {
   fs.copyFileSync(DEFAULT_PATH, CONFIG_PATH);
@@ -72,26 +72,6 @@ const ETHICS_TEXT = {
   5: "Apply maximum ethical scrutiny to every decision. Before any suggestion evaluate: (a) potential harm to marginalized or vulnerable groups, (b) DEI implications, (c) broader social and systemic consequences. Flag and block suggestions with significant ethical risk. Prioritize inclusive, equitable, and socially responsible outcomes above other considerations.",
 };
 
-const STRENGTH_TEXT = {
-  1: "Observe silently. Log without influencing output.",
-  2: "Note issues but do not block.",
-  3: "Actively weigh feedback in decisions.",
-  4: "Actively challenge decisions that conflict with this perspective.",
-  5: "Veto authority. Block until the issue is resolved.",
-};
-
-const AGENT_LABELS = {
-  consequence: "CONSEQUENCE",
-  resources: "RESOURCES",
-  craftsmanship: "CRAFTSMANSHIP",
-};
-
-const AGENT_DESCRIPTIONS = {
-  consequence: "Weigh consequences, bias, and EDI factors in all decisions.",
-  resources: "Minimize resource usage and token-expensive patterns.",
-  craftsmanship: "Encourage precision, good practices, and code quality.",
-};
-
 function buildPrompt(config) {
   const g = config.global;
   const lines = [];
@@ -101,31 +81,6 @@ function buildPrompt(config) {
   lines.push(`[CLARIFICATION] ${CLARIFICATION_TEXT[g.clarification]}`);
   lines.push(`[EXPLANATIONS] ${EXPLANATIONS_TEXT[g.explanations ?? 3]}`);
   lines.push(`[ETHICS] ${ETHICS_TEXT[g.ethics ?? 3]}`);
-
-  const agents = config.perspective_agents;
-  const active = Object.entries(agents)
-    .filter(([, a]) => a.active)
-    .sort(([, a], [, b]) => a.priority - b.priority);
-
-  if (active.length > 0) {
-    lines.push("");
-    for (const [id, agent] of active) {
-      const label = AGENT_LABELS[id] || id.toUpperCase();
-      lines.push(
-        `[PERSPECTIVE: ${label} — priority ${agent.priority}, strength ${agent.strength}/5]`
-      );
-      lines.push(AGENT_DESCRIPTIONS[id] || "");
-      lines.push(STRENGTH_TEXT[agent.strength]);
-      if (agent.strength >= 4) {
-        lines.push(
-          "Treat this as a hard constraint. Flag and block issues until resolved."
-        );
-      } else {
-        lines.push("Flag issues but do not block output.");
-      }
-      lines.push("");
-    }
-  }
 
   return lines.join("\n").trim();
 }
@@ -154,6 +109,15 @@ app.put("/config", (req, res) => {
   }
 });
 
+app.post("/new-case", (req, res) => {
+  try {
+    const caseId = createNewCase();
+    res.json({ case: caseId, config: readConfig() });
+  } catch (err) {
+    res.status(500).json({ error: "Could not create case", detail: err.message });
+  }
+});
+
 app.post("/trigger", (req, res) => {
   try {
     const { agent } = req.body;
@@ -164,15 +128,6 @@ app.post("/trigger", (req, res) => {
     res.json(payload);
   } catch (err) {
     res.status(500).json({ error: "Could not write trigger", detail: err.message });
-  }
-});
-
-app.get("/result", (req, res) => {
-  try {
-    const data = JSON.parse(fs.readFileSync(RESULT_PATH, "utf8"));
-    res.json(data);
-  } catch {
-    res.json({ agent: null, analysis: null });
   }
 });
 
