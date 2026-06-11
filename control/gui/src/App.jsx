@@ -272,17 +272,25 @@ export default function App() {
               </div>
             )}
 
-            {/* UNCONFIRMED alerts */}
-            {decisions.filter(d => d.status === "UNCONFIRMED").map(d => (
-              <div key={d.id} style={{
-                background: "#fef2f2", border: "1px solid #fca5a5",
-                borderRadius: "10px", padding: "10px 14px", marginBottom: "8px",
-                fontSize: "11px", fontFamily: MONO, color: "#b91c1c",
-              }}>
-                ⚠ MDR-{d.id}: {d.title}
-                <div style={{ fontSize: "10px", color: "#6b7280", marginTop: "4px" }}>{d.what}</div>
-              </div>
-            ))}
+            {/* Summary: how many decisions, how autonomous */}
+            {decisions.length > 0 && (() => {
+              const n   = decisions.length;
+              const aut = decisions.filter(d => d.derivation === "Autonomous").length;
+              const itp = decisions.filter(d => d.derivation === "Interpretation").length;
+              const dir = decisions.filter(d => d.derivation === "Direct").length;
+              return (
+                <div style={{
+                  fontSize: "10px", fontFamily: MONO, color: "#374151",
+                  marginBottom: "12px", padding: "8px 10px",
+                  background: "#f9f9f8", borderRadius: "8px",
+                }}>
+                  <strong>{n}</strong> decisions ·{" "}
+                  <span style={{ color: "#ef4444" }}>{aut} autonomous</span> ·{" "}
+                  <span style={{ color: "#f59e0b" }}>{itp} interpretation</span> ·{" "}
+                  <span style={{ color: "#10b981" }}>{dir} direct</span>
+                </div>
+              );
+            })()}
 
             {/* Empty state */}
             {decisions.length === 0 && !analyzing && (
@@ -293,18 +301,23 @@ export default function App() {
 
             {/* Decision list */}
             {decisions.map(d => {
-              const color = d.status === "UNCONFIRMED" ? "#f59e0b" : "#10b981";
+              const color = d.derivation === "Autonomous"     ? "#ef4444"
+                          : d.derivation === "Interpretation" ? "#f59e0b"
+                          : "#10b981";
               return (
                 <div key={d.id} style={{
                   borderLeft: `3px solid ${color}`,
                   paddingLeft: "12px", marginBottom: "12px",
                 }}>
                   <div style={{ fontSize: "10px", fontFamily: MONO, color: "#374151", fontWeight: "700" }}>
-                    MDR-{d.id} · {d.nature} · {d.scope}
-                    <span style={{ color, marginLeft: "8px" }}>{d.status}</span>
+                    MDR-{d.id} · {d.type}
+                    <span style={{ color, marginLeft: "8px" }}>{d.derivation}</span>
+                  </div>
+                  <div style={{ fontSize: "11px", fontFamily: SANS, color: "#374151", marginTop: "3px", fontWeight: 600 }}>
+                    {d.title}
                   </div>
                   <div style={{ fontSize: "11px", fontFamily: SANS, color: "#6b7280", marginTop: "2px" }}>
-                    {d.what}
+                    {d.decision}
                   </div>
                 </div>
               );

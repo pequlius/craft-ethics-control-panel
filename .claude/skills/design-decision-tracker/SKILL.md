@@ -2,149 +2,101 @@
 name: design-decision-tracker
 description: >
   A skill for a sub-agent in a Claude Code multi-agent system whose responsibility is to
-  monitor all agent outputs and user interactions, detect design decisions — especially
-  those made autonomously without explicit user input — and maintain a structured decision
-  log. Use this skill whenever an orchestrator routes agent output to a tracking agent,
-  when a reviewer agent needs to analyze implicit architectural or aesthetic choices, or
-  when the system needs to flag decisions for user confirmation. Trigger whenever agent
-  output is passed for review, when a session summary is requested, or when an escalation
-  check is needed.
+  detect design decisions made by the AI while carrying out a task, and to log them in a
+  structured decision log. The central purpose is to make visible how many small decisions
+  the AI makes relative to the user's actual input. Use this skill whenever agent output is
+  reviewed, a session summary is requested, or a decision log needs to be maintained.
 ---
 # Design Decision Tracker
-This skill defines how a dedicated sub-agent should analyze agent output and user
-interaction history to detect, classify, and document design decisions — with particular
-focus on decisions made *without* explicit user input.
+
+This skill defines how to detect, classify, and log the design decisions an AI agent makes
+while doing design work.
+
+## Core purpose
+
+> **Make visible how many small decisions the AI makes relative to what the user actually asked for.**
+
+A single vague instruction ("make it colourful and fun") can spawn a dozen concrete
+decisions the user never explicitly made. The log exists to surface that gap. Every
+non-trivial choice is recorded — the value is in the *volume* and in how each decision
+traces back (or fails to trace back) to the user's prompt.
+
 ---
-## Core Responsibility
-The tracker agent does not implement features. It observes and documents. Its primary
-question for every piece of agent output is:
-> **"Was there a choice made here that the user did not get to make?"**
----
-## Decision Classification
-Every detected decision is classified along **three independent dimensions**.
----
-### Dimension 1 — Decision Nature
-How did this decision come about?
-| Value | Definition | Example |
-|---|---|---|
-| **EXPLICIT** | User directly requested this specific choice | "Use Tailwind CSS" → agent uses Tailwind |
-| **DERIVED** | User requested an outcome; agent chose the means | "Make it responsive" → agent chose CSS Grid over Flexbox |
-| **AUTONOMOUS** | Agent solved a problem the user never raised | Agent added rate limiting without discussing it |
-Focus your attention on **DERIVED** and **AUTONOMOUS** decisions. EXPLICIT decisions
-should be logged but require no escalation.
----
-### Dimension 2 — Decision Domain
-What part of the system does this decision affect?
-| Domain | Description | Typical examples |
-|---|---|---|
-| **Functional scope** | What the system does or deliberately does not do | Added error handling, chose to ignore edge case |
-| **Interaction design** | How the user navigates and interacts | Choice of interaction pattern, flow, feedback mechanism |
-| **Visual / aesthetic** | Appearance, typography, colour, layout | Chose card-based layout without presenting alternatives |
-| **Information architecture** | How content and data is organised and named | Naming conventions, hierarchy, categorisation logic |
-| **Technical architecture** | Structural choices affecting the whole codebase | State management strategy, component structure, API design |
-| **Infrastructure & dependencies** | Libraries, frameworks, external services | Added a library with long-term consequences |
-| **Data & persistence** | How data is modelled, stored, and managed | Schema choice, what is stored vs. discarded |
-| **Performance & constraints** | Trade-offs around speed, scalability, cost | Chose eager over lazy loading without discussion |
-A decision may span multiple domains; list all that apply.
----
-### Dimension 3 — Scope
-How far does the impact of this decision reach?
-| Value | Meaning |
+
+## Classification
+
+Each decision is classified along **two axes**.
+
+### Axis 1 — Type
+
+What does the decision affect?
+
+| Type | Covers |
 |---|---|
-| **Local** | Affects only this component or function |
-| **Modular** | Affects a subsystem or bounded area of the application |
-| **Global** | Affects overall architecture, cross-cutting UX, or future option space |
-Scope is the primary driver of escalation priority (see Escalation Logic below).
+| **Functionality** | What the software can *do* — entirely new functions or modifications of existing ones |
+| **User Experience** | Appearance & interaction — colour, fonts, layout, interactive behaviour, feedback, delight |
+| **Infrastructure** | Underlying mechanics not directly visible to the user — data storage, file structure, coding schemes, state management |
+| **Content & Scope** | What the app *includes or excludes* — categories, default values, copy/wording, naming, which options exist at all |
+
+Pick the single best-fit type. Tie-break order when ambiguous:
+Content & Scope → Functionality → User Experience → Infrastructure.
+
+### Axis 2 — Derivation
+
+How far did the decision travel from the user's prompt? **This is the heart of the log.**
+
+| Derivation | Meaning | Test |
+|---|---|---|
+| **Direct** | The user named exactly this | Can you point to the word in the prompt? |
+| **Interpretation** | The user gave a goal/quality; this is one reasonable realisation of it | Is the *intent* in the prompt but not the *thing*? |
+| **Autonomous** | The prompt is silent on this dimension — even if the choice happens to serve the overall goal | Is there no phrase at all to trace the decision to? |
+
+**Anti-default rule:** When torn between Interpretation and Autonomous, ask whether there is
+a *concrete phrase* in the prompt the decision can be traced to. **If there is no such phrase,
+it is Autonomous.** Do not let Interpretation become a catch-all — "I made a judgement call"
+is not enough to qualify as Interpretation; the prompt must actually gesture at the dimension.
+
+Worked examples (brief: "make it colourful and fun"):
+- purple gradient theme → **Interpretation** (colour was requested)
+- confetti on save → **Interpretation** (fun was requested)
+- mood key bound to the week's start date → **Autonomous** (persistence was never mentioned)
+- six fixed categories → **Autonomous** (categorisation was never mentioned)
+
 ---
-## Detection Framework
-For each agent output, apply this sequence of analytical questions:
-### 1. Identify choices made
-- What options existed at this point that were not all equivalent?
-- What was *not* done that reasonably could have been?
-- What constraints were introduced that did not exist before?
-### 2. Trace user authorization
-- Did the user explicitly name this approach?
-- Did the user's instruction imply this approach, or merely imply the goal?
-- Was the user presented with alternatives before the choice was made?
-### 3. Assess forward impact
-- Does this decision constrain future options? (High impact)
-- Is this decision reversible without significant rework? (Low impact)
-- Does this decision affect: architecture, data model, visual identity, external
-  dependencies, security posture, or performance characteristics?
-### 4. Check for silent assumption chains
-- Did this decision follow from a prior autonomous decision?
-- If so, flag both, and note the dependency.
----
+
 ## Documentation Format
+
 Record each detected decision as a **Micro Decision Record (MDR)**:
+
 ```
 ## MDR-[NNN]: [Short title]
-**Nature**:   EXPLICIT | DERIVED | AUTONOMOUS          ← Dimension 1
-**Domain**:   [one or more of the eight domains]        ← Dimension 2
-**Scope**:    Local | Modular | Global                  ← Dimension 3
-**Reversibility**: Easy | Moderate | Difficult
-**What was decided**:
-[One or two sentences describing the concrete choice that was made.]
-**Context in agent output**:
-[Brief reference to where in the output this decision appears.]
-**Alternatives not considered (or not presented to user)**:
-[List 1–3 reasonable alternatives that existed at this point.]
-**Future constraints**:
-[What future choices does this decision close off or make harder?]
-**User consulted**: Yes | No | Partially
-**User input**: [Quote or "N/A"]
-**Confirmation status**: CONFIRMED | UNCONFIRMED
-
+**Type**:        Functionality | User Experience | Infrastructure | Content & Scope
+**Derivation**:  Direct | Interpretation | Autonomous
+**Prompt**:      "[The relevant fragment of the user's instruction, or — if none]"
+**Decision**:    [One sentence: what was concretely chosen.]
+**Rationale**:   [Short: why this choice — for Interpretation/Autonomous. Otherwise —]
 ```
----
-## Confirmation Logic
-Every decision is listed regardless of nature, domain, or scope. No decisions are silently dropped.
 
-**CONFIRMED** — The user has explicitly approved, acknowledged, or directly requested this decision.
+Keep entries short. The log's power is in the list as a whole, so a long task should
+produce a visibly long list.
 
-**UNCONFIRMED** — The user has not been consulted, or was only partially consulted. All DERIVED and AUTONOMOUS decisions start as UNCONFIRMED.
+---
 
-When surfacing UNCONFIRMED decisions to the user, use this prompt template:
-> "An agent made the following decision without consulting you:
-> [Short description]. Domain: [domain]. Scope: [scope].
-> This constrains: [what is affected going forward].
-> Options: (A) Confirm and continue, (B) Choose an alternative: [list], (C) Pause to discuss."
+## What counts as a decision
 
-Pay particular attention to decisions that:
-- Are part of a **silent assumption chain** (one autonomous decision leading to another)
-- Have **Difficult** reversibility
-- Affect **multiple domains** simultaneously
+- A choice between options that were **not all equivalent**.
+- Something that was **done that could reasonably have been done differently**.
+- Something **introduced that the user never asked for**.
+
+Skip pure micro-style (naming `userId` vs `user_id`); keep anything that affects what the
+software does, how it feels, how it is built, or what it contains.
+
 ---
-## Session Summary Output
-When requested to produce a session summary, output:
-1. **Decision count by nature** — totals for EXPLICIT / DERIVED / AUTONOMOUS
-2. **Decision distribution by domain** — which domains have the highest concentration of autonomous decisions
-3. **UNCONFIRMED decisions** — listed in full MDR format, prioritised by scope
-4. **Assumption chains** — any sequences of dependent autonomous decisions
-5. **Open questions** — decisions that remain unconfirmed by the user
----
-## Important Constraints
-- **Do not interrupt agent workflow** unless explicitly given escalation authority by the
-  orchestrator. Default behavior is to log and surface summaries on request.
-- **Do not infer intent** beyond what is evidenced in the text. If unsure whether a choice
-  was made, note it as a candidate with low confidence rather than inventing a decision.
-- **Distinguish style from substance**: An agent choosing to name a variable `userId`
-  instead of `user_id` is a micro-style decision; an agent choosing to store user IDs as
-  integers instead of UUIDs is a structural decision. Apply impact assessment accordingly.
-- **Track your own decisions too**: If the tracker agent makes any inference or
-  classification choice that is non-obvious, log it as an AUTONOMOUS decision with
-  category "Meta".
----
-## Input Format (from Orchestrator)
-The orchestrator should route input to this agent in the following format:
-```
-[SOURCE]: <agent-name> | user
-[TIMESTAMP]: <ISO 8601>
-[CONTENT]:
-<full agent output or user message>
-```
-Multiple inputs can be batched in a single call. Process each separately.
----
-## References
-- `references/diff-analysis.md` — How to analyse a git commit diff to detect design
-  decisions. Read this when processing a commit-based review trigger.
+
+## Important constraints
+
+- **Do not invent decisions.** If unsure whether a real choice was made, leave it out.
+- **Do not interrupt the workflow.** Log silently; the list is reviewed on request.
+- **Number sequentially.** Never overwrite existing entries; append with the next MDR number.
+- **One type per entry.** If a decision genuinely spans two, pick the dominant one by the
+  tie-break order above.

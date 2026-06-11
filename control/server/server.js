@@ -156,15 +156,15 @@ function parseMDRs(raw) {
     .split(/^## MDR-/m)
     .slice(1)
     .map(block => {
-      const id     = block.match(/^(\d+)/)?.[1] ?? "?";
-      const title  = block.match(/^\d+:\s*(.+)/)?.[1]?.trim() ?? "";
-      const nature = block.match(/\*\*Nature\*\*:\s*(\w+)/)?.[1] ?? "";
-      const scope  = block.match(/\*\*Scope\*\*:\s*(\w+)/)?.[1] ?? "";
-      const status = block.match(/\*\*Confirmation status\*\*:\s*(\w+)/)?.[1]
-                 ?? block.match(/\*\*Escalation status\*\*:\s*(\w+)/)?.[1]  // legacy
-                 ?? "UNCONFIRMED";
-      const what   = block.match(/\*\*What was decided\*\*:\n([^\n*]+)/)?.[1]?.trim() ?? "";
-      return { id, title, nature, scope, status, what };
+      const id         = block.match(/^(\d+)/)?.[1] ?? "?";
+      const title      = block.match(/^\d+:\s*(.+)/)?.[1]?.trim() ?? "";
+      const type       = block.match(/\*\*Type\*\*:\s*([^\n]+?)\s*$/m)?.[1]?.trim() ?? "";
+      const derivation = block.match(/\*\*Derivation\*\*:\s*(\w+)/)?.[1] ?? "";
+      const prompt     = block.match(/\*\*Prompt\*\*:\s*([^\n]+)/)?.[1]?.trim() ?? "";
+      const decision   = block.match(/\*\*Decision\*\*:\s*\n?([^\n*]+)/)?.[1]?.trim()
+                     ?? block.match(/\*\*What was decided\*\*:\s*\n?([^\n*]+)/)?.[1]?.trim()  // legacy
+                     ?? "";
+      return { id, title, type, derivation, prompt, decision };
     });
 }
 
@@ -179,19 +179,25 @@ app.post("/report", (req, res) => {
     const raw  = fs.existsSync(decPath) ? fs.readFileSync(decPath, "utf8") : "";
     const mdrs = parseMDRs(raw);
 
-    const unconfirmed = mdrs.filter(d => d.status === "UNCONFIRMED");
-    const confirmed   = mdrs.filter(d => d.status === "CONFIRMED");
+    const autonomous     = mdrs.filter(d => d.derivation === "Autonomous");
+    const interpretation = mdrs.filter(d => d.derivation === "Interpretation");
+    const direct         = mdrs.filter(d => d.derivation === "Direct");
+
+    const derivClass = (d) =>
+      d.derivation === "Autonomous"     ? "autonomous"
+    : d.derivation === "Interpretation" ? "interpretation"
+    : "direct";
 
     const mdrCard = (d) => `
-      <div class="card ${d.status === "UNCONFIRMED" ? "unconfirmed" : "confirmed"}">
+      <div class="card ${derivClass(d)}">
         <div class="card-header">
           <span class="mdr-id">MDR-${d.id}</span>
-          <span class="badge ${d.status === "UNCONFIRMED" ? "badge-warn" : "badge-ok"}">${d.status}</span>
-          <span class="nature">${d.nature}</span>
-          <span class="scope">${d.scope}</span>
+          <span class="badge badge-${derivClass(d)}">${escHtml(d.derivation || "—")}</span>
+          <span class="type">${escHtml(d.type || "—")}</span>
         </div>
         <div class="card-title">${escHtml(d.title)}</div>
-        <div class="card-what">${escHtml(d.what)}</div>
+        <div class="card-what">${escHtml(d.decision)}</div>
+        ${d.prompt ? `<div class="card-prompt">↳ prompt: ${escHtml(d.prompt)}</div>` : ""}
       </div>`;
 
     const html = `<!DOCTYPE html>
@@ -204,8 +210,10 @@ app.post("/report", (req, res) => {
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #f9f7f4; --surface: #fff; --border: #e5e1db;
-      --ink: #1a1208; --muted: #8a8070; --warn: #b45309; --ok: #166534;
-      --warn-bg: #fffbeb; --ok-bg: #f0fdf4; --warn-border: #fcd34d; --ok-border: #86efac;
+      --ink: #1a1208; --muted: #8a8070;
+      --aut: #dc2626; --itp: #d97706; --dir: #059669;
+      --aut-bg: #fef2f2; --itp-bg: #fffbeb; --dir-bg: #f0fdf4;
+      --aut-bd: #fca5a5; --itp-bd: #fcd34d; --dir-bd: #86efac;
       --mono: "JetBrains Mono", "Fira Code", monospace;
       --sans: "Inter", system-ui, sans-serif;
     }
@@ -215,24 +223,28 @@ app.post("/report", (req, res) => {
     .label { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
     h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em; }
     .meta { font-size: 0.82rem; color: var(--muted); margin-top: 6px; }
-    .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 40px; }
-    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; }
-    .stat-n { font-family: var(--mono); font-size: 2rem; font-weight: 700; }
-    .stat-n.warn { color: var(--warn); }
-    .stat-n.ok   { color: var(--ok); }
+    .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 40px; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+    .stat-n { font-family: var(--mono); font-size: 1.8rem; font-weight: 700; }
+    .stat-n.aut { color: var(--aut); }
+    .stat-n.itp { color: var(--itp); }
+    .stat-n.dir { color: var(--dir); }
     .section-title { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
-    .cards { display: flex; flex-direction: column; gap: 12px; margin-bottom: 40px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; border-left: 4px solid var(--border); }
-    .card.unconfirmed { border-left-color: var(--warn); background: var(--warn-bg); }
-    .card.confirmed   { border-left-color: var(--ok);   background: var(--ok-bg); }
-    .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 40px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; border-left: 4px solid var(--border); }
+    .card.autonomous     { border-left-color: var(--aut); background: var(--aut-bg); }
+    .card.interpretation { border-left-color: var(--itp); background: var(--itp-bg); }
+    .card.direct         { border-left-color: var(--dir); background: var(--dir-bg); }
+    .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
     .mdr-id { font-family: var(--mono); font-size: 0.72rem; font-weight: 700; color: var(--muted); }
     .badge { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; font-weight: 700; }
-    .badge-warn { background: var(--warn-border); color: var(--warn); }
-    .badge-ok   { background: var(--ok-border);   color: var(--ok); }
-    .nature, .scope { font-size: 0.72rem; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; }
-    .card-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .badge-autonomous     { background: var(--aut-bd); color: var(--aut); }
+    .badge-interpretation { background: var(--itp-bd); color: var(--itp); }
+    .badge-direct         { background: var(--dir-bd); color: var(--dir); }
+    .type { font-size: 0.72rem; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; }
+    .card-title { font-weight: 600; font-size: 0.92rem; margin-bottom: 3px; }
     .card-what { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+    .card-prompt { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-top: 6px; font-style: italic; }
     .empty { color: var(--muted); font-size: 0.9rem; font-style: italic; padding: 16px 0; }
     footer { font-size: 0.72rem; color: var(--muted); font-family: var(--mono); text-align: center; border-top: 1px solid var(--border); padding-top: 20px; margin-top: 40px; }
   </style>
@@ -251,23 +263,22 @@ app.post("/report", (req, res) => {
       <div class="stat-n">${mdrs.length}</div>
     </div>
     <div class="stat">
-      <div class="label">Ej bekräftade</div>
-      <div class="stat-n warn">${unconfirmed.length}</div>
+      <div class="label">Autonoma</div>
+      <div class="stat-n aut">${autonomous.length}</div>
     </div>
     <div class="stat">
-      <div class="label">Bekräftade</div>
-      <div class="stat-n ok">${confirmed.length}</div>
+      <div class="label">Tolkning</div>
+      <div class="stat-n itp">${interpretation.length}</div>
+    </div>
+    <div class="stat">
+      <div class="label">Direkta</div>
+      <div class="stat-n dir">${direct.length}</div>
     </div>
   </div>
 
-  ${unconfirmed.length > 0 ? `
-  <div class="section-title">Ej bekräftade beslut (${unconfirmed.length})</div>
-  <div class="cards">${unconfirmed.map(mdrCard).join("")}</div>
-  ` : ""}
-
-  ${confirmed.length > 0 ? `
-  <div class="section-title">Bekräftade beslut (${confirmed.length})</div>
-  <div class="cards">${confirmed.map(mdrCard).join("")}</div>
+  ${mdrs.length > 0 ? `
+  <div class="section-title">Beslut (${mdrs.length}) — i ordning</div>
+  <div class="cards">${mdrs.map(mdrCard).join("")}</div>
   ` : ""}
 
   ${mdrs.length === 0 ? `<p class="empty">Inga beslut loggade ännu.</p>` : ""}

@@ -158,14 +158,14 @@ No network call is needed, so it works on any machine, including those where new
 
 ## Decision tracking
 
-Each case session has a `decisions.md` file that records design decisions in MDR (Micro Decision Record) format. The `design-decision-tracker` sub-agent populates this file automatically after each completed task.
+Each case session has a `decisions.md` file that records design decisions in MDR (Micro Decision Record) format. The case agent populates this file automatically after each completed task (per the `[DECISION TRACKING]` instruction injected into the prompt) — no manual triggering needed.
 
-The tracker is invoked by the case agent (per the instruction in `CLAUDE.md`) — no manual triggering needed. Each MDR captures:
+The purpose is to make visible **how many small decisions the AI makes relative to what the user actually asked for**. Each MDR captures:
 
-- What was decided and why
-- Alternatives not considered
-- Whether the user was consulted
-- Escalation status (`LOGGED` or `FLAGGED`)
+- **Type** — Functionality, User Experience, Infrastructure, or Content & Scope
+- **Derivation** — Direct (user named it), Interpretation (a reading of a stated goal), or Autonomous (the prompt was silent)
+- **Prompt** — the fragment of user input the decision traces back to
+- **Decision** and a short rationale
 
 ---
 
